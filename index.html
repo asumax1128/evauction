@@ -7,7 +7,7 @@
 <meta name="description" content="くじの期待値を見ぬいて競り落とす、数学A「確率と期待値」の駆け引きゲーム">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700;1,900&family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <style>
 :root{
   color-scheme:dark;
@@ -244,6 +244,112 @@ body.big .feed p{font-size:1.1rem}
 
 .lot .prize{flex-wrap:wrap}.lot .prize > span{white-space:nowrap}
 .wnames span.out{opacity:.55;text-decoration:line-through}
+/* =====================================================================
+   テーマ：タイトルロゴ「EV×auction」に合わせた、夜の競売場。
+   黒〜こげ茶の会場にスポットライト、金の文字（太いセリフ体イタリック）、マホガニーの木と金のふち
+   ===================================================================== */
+:root{
+  --bg:#0a0705; --bg2:#050302; --panel:#1a110c; --line:rgba(232,184,74,.22);
+  --text:#f6ead2; --dim:#bfa98a; --brass:#e8b84a; --brass-dk:#a8781e;
+  --gold-grad:linear-gradient(180deg,#fff3c4 0%,#f7d77a 28%,#e2a93a 52%,#b97a1c 72%,#f1cd6a 100%);
+  --wood:linear-gradient(180deg,#6b3a1f,#4a2412 55%,#2e1509);
+  --f-disp:"Playfair Display","Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;
+  --f-ja:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;
+  --f-num:"Playfair Display","IBM Plex Mono",serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+body{
+  background:
+    radial-gradient(ellipse 22% 60% at 18% -8%, rgba(255,214,140,.16), transparent 70%),
+    radial-gradient(ellipse 22% 60% at 50% -10%, rgba(255,214,140,.20), transparent 70%),
+    radial-gradient(ellipse 22% 60% at 82% -8%, rgba(255,214,140,.16), transparent 70%),
+    radial-gradient(ellipse 140% 80% at 50% 0%, #2a1a10 0%, #120b07 55%, var(--bg2) 100%);
+  background-color:var(--bg); background-attachment:fixed;
+}
+/* 金の文字 */
+.gold,h1,h2,.big-result,.bidnum,.risebox .price,.code,.countdown,.bigcount,.gavel,.payout.hit,.stylecard .sname,.val,.subttl b{
+  font-family:var(--f-disp); font-style:italic; font-weight:900;
+  background:var(--gold-grad); -webkit-background-clip:text; background-clip:text; color:transparent;
+  filter:drop-shadow(0 2px 0 #3a1d08) drop-shadow(0 0 10px rgba(232,184,74,.25));
+}
+h2,.big-result,.gavel,.stylecard .sname{font-family:var(--f-ja);font-style:normal}
+.payout.neg{font-family:var(--f-disp);font-style:italic;font-weight:900}
+.bidnum,.risebox .price,.code,.countdown,.bigcount{font-variant-numeric:lining-nums tabular-nums;letter-spacing:.02em}
+.code{letter-spacing:.12em}
+.eyebrow{color:var(--brass);letter-spacing:.22em;font-family:var(--f-disp);font-style:italic;font-weight:700}
+.num{font-family:var(--f-mono)}
+
+/* タイトル */
+.title{padding-block:4px 0}
+.logo-img{margin:0;filter:none;background:none;width:100%;display:flex;justify-content:center}
+.logo-img img{width:min(560px,100%);height:auto;display:block;filter:drop-shadow(0 8px 24px rgba(0,0,0,.6))}
+.title.sm .logo-img img{width:min(300px,70%)}
+.subttl{font-family:var(--f-ja);font-weight:800;font-size:.95rem;color:var(--text);text-align:center;letter-spacing:.06em}
+
+/* パネル：黒いビロードに金のふち */
+.panel{background:linear-gradient(180deg,rgba(40,26,16,.92),rgba(20,13,8,.94));border:1px solid rgba(232,184,74,.45);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,230,170,.12), 0 8px 20px rgba(0,0,0,.45);border-radius:14px}
+.panel.center{background:radial-gradient(ellipse at 50% 0%,rgba(232,184,74,.10),transparent 60%),linear-gradient(180deg,rgba(40,26,16,.94),rgba(20,13,8,.96))}
+
+/* ボタン：金の板 */
+.btn{background:linear-gradient(180deg,#fff0b8 0%,#f2c95c 35%,#d39a2c 70%,#a8701a 100%);color:#2a1505;font-family:var(--f-ja);font-weight:800;
+  border:1px solid #6b4310;box-shadow:inset 0 1px 0 rgba(255,255,255,.7),inset 0 -2px 0 rgba(90,50,10,.5),0 4px 0 #4a2a0a,0 8px 18px rgba(0,0,0,.45);
+  text-shadow:0 1px 0 rgba(255,240,200,.6);letter-spacing:.04em;transition:transform .08s}
+.btn:active:not(:disabled){transform:translateY(3px);box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 1px 0 #4a2a0a}
+.btn.danger{background:linear-gradient(180deg,#ff9a85,#e2442e 55%,#9e2312);color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.35);border-color:#5a1208}
+.ghost{background:linear-gradient(180deg,rgba(60,38,22,.9),rgba(30,19,11,.9));border:1px solid rgba(232,184,74,.5);color:var(--text);font-weight:700}
+.seg button{border-color:rgba(232,184,74,.4);background:rgba(30,19,11,.8)}
+.seg button[aria-pressed="true"]{background:linear-gradient(180deg,#fff0b8,#f2c95c 40%,#c58a24);color:#2a1505;border-color:#6b4310}
+.steps button{border-color:rgba(232,184,74,.35);background:rgba(30,19,11,.7);color:var(--text)}
+input[type=text]{background:rgba(10,6,4,.7);border-color:rgba(232,184,74,.45)}
+input[type=range]{accent-color:#e8b84a}
+.chip{border-color:rgba(232,184,74,.35);background:rgba(20,13,8,.6)}
+.chip.me{background:linear-gradient(180deg,rgba(232,184,74,.22),rgba(232,184,74,.08))}
+
+/* くじ：金のふちの羊皮紙を、マホガニーの台にのせる */
+.lot{background:linear-gradient(180deg,#fbf1d8,#f0dfb6);border:3px solid transparent;border-radius:12px;
+  background-clip:padding-box;box-shadow:0 0 0 2px #b8862a,0 0 0 5px #3a1d0b,0 0 0 6px #d9a94a,0 10px 0 #2e1509,0 14px 24px rgba(0,0,0,.55)}
+.lot .how{font-family:var(--f-ja)}
+.lot .prize b{font-family:var(--f-disp);font-style:italic;font-weight:900;color:#5a2a0c}
+.lot .no{font-family:var(--f-disp);font-style:italic;font-weight:700;color:#8a5a22}
+.lot.sel.on{box-shadow:0 0 0 2px #b8862a,0 0 0 5px #3a1d0b,0 0 0 9px #ffd76a,0 10px 0 #2e1509,0 0 30px rgba(255,215,106,.55)}
+.lot.jackpot{background:linear-gradient(180deg,#fff6d6,#f4d27a)}
+.lot.minus{background:linear-gradient(180deg,#f6e6d6,#e8c3b4)}
+.lots{gap:18px}
+
+/* 演台（せり上げの値段・入札額）にマホガニー */
+.risebox,.panel.center.pop{border-color:rgba(232,184,74,.6)}
+.risebox{background:radial-gradient(ellipse at 50% 0%,rgba(255,214,140,.18),transparent 65%),var(--wood)}
+.gauge{border-color:rgba(232,184,74,.4);background:rgba(10,6,4,.7)}
+.gauge .bar{background:linear-gradient(90deg,#a8701a,#f2c95c)}
+
+/* 結果発表：スポットライトの当たった演台 */
+.stage{background:
+  radial-gradient(ellipse 18% 70% at 30% -10%, rgba(255,214,140,.18), transparent 70%),
+  radial-gradient(ellipse 18% 70% at 70% -10%, rgba(255,214,140,.18), transparent 70%),
+  radial-gradient(ellipse 60% 40% at 50% 100%, rgba(120,60,20,.45), transparent 70%),
+  radial-gradient(ellipse at 50% 30%,#2a170c,rgba(6,4,2,.98))}
+.stage .cap{font-family:var(--f-disp);font-style:italic;font-weight:700;letter-spacing:.2em}
+.gavel{font-size:clamp(2.8rem,13vw,5rem)}
+.wlot{background:linear-gradient(180deg,rgba(60,36,20,.7),rgba(25,15,9,.8));border-color:rgba(232,184,74,.4)}
+.wnames span{background:rgba(232,184,74,.16);border:1px solid rgba(232,184,74,.25)}
+.mine{font-family:var(--f-ja)}
+.band{top:30%}
+.band b{font-family:var(--f-disp);font-style:italic;font-weight:900;background:var(--gold-grad);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 3px 0 #3a1d08)}
+.band{background:linear-gradient(90deg,transparent,rgba(10,6,4,.92) 12%,rgba(10,6,4,.92) 88%,transparent);border-block:2px solid #d9a94a}
+
+/* 表・小物 */
+th{color:var(--brass);font-family:var(--f-disp);font-style:italic}
+tr.me td{color:#ffd76a}
+.won{background:var(--gold-grad);color:#2a1505}
+.stylecard{background:radial-gradient(ellipse at 50% 0%,rgba(232,184,74,.16),transparent 60%),linear-gradient(180deg,#2c1b10,#160e08);border-color:#e8b84a}
+.feed p{border-left-color:#e8b84a;background:rgba(232,184,74,.06)}
+.rb{border:1px solid rgba(255,255,255,.15)}
+.players li{background:rgba(232,184,74,.08);border:1px solid rgba(232,184,74,.2)}
+.ltag.x2{background:linear-gradient(180deg,#e2442e,#9e2312)}
+.ltag.jp{background:linear-gradient(180deg,#ff6be0,#b51d97)}
+
+.emo{color:#fff;-webkit-text-fill-color:#fff;background:none;filter:none;font-style:normal}
 </style>
 </head>
 <body>
@@ -509,7 +615,7 @@ function styleOf(G, i){
     if((arr(h.hints)[i]||0)>0) hintN++;
     if(tag.includes('minus')){ minusSeen++; if(p===0 || tag[l]!=='minus') minusPass++; }
     if(p>0 && l>=0){
-      bids++; if(ev[l]>0) ratioSum += p/ev[l];
+      bids++; ratioSum += Math.min(3, p/Math.max(10, ev[l]));
       if(tag[l]==='jackpot' && ev[l]>0 && p/ev[l]>=1.3) jackHigh++;
       if(win[l] && win[l].includes(i)) evGain += ev[l]-p;
     } else pass++;
@@ -927,7 +1033,7 @@ function render(){
   ({home:renderHome, solo:renderSolo, lobby:renderLobby, game:renderGame})[screen]();
   bindMute();
 }
-const logo = small => `<header class="title ${small?'sm':''}"><span class="eyebrow">EXPECTED VALUE AUCTION</span><h1>期待値オークション</h1><div class="rule"></div>${small?'':'<span class="dim" style="font-size:.85rem">くじの「本当の値打ち」を見ぬいて競り落とせ</span>'}</header>`;
+const logo = small => `<header class="title ${small?'sm':''}"><h1 class="logo-img"><img src="title.png" alt="EV×auction 期待値オークション"></h1>${small?'':'<span class="subttl">期待値オークション ─ くじの「本当の値打ち」を見ぬいて競り落とせ</span>'}</header>`;
 function rulesPanel(){
   return `<section class="panel">
     <span class="eyebrow">ルール</span>
@@ -1139,7 +1245,7 @@ function renderShow(){
     const c = 3 - Math.floor(t/(SHOW_COUNT/3));
     inner = `<span class="cap">ROUND ${G.round+1} ・ ${G.mode==='rising'?'落札決定':'入札オープン'}</span><p class="countdown num">${Math.max(1,c)}</p><p class="what">${G.mode==='rising'?'せり上げ終了！':'全員の入札をいっせいに公開します…'}</p>`;
   } else if(ph==='reveal'){
-    inner = `<span class="cap">ROUND ${G.round+1} ・ 落札者</span><p class="gavel">🔨 落札！</p>
+    inner = `<span class="cap">ROUND ${G.round+1} ・ 落札者</span><p class="gavel"><span class="emo">🔨</span> 落札！</p>
       <div class="winners">${lots.map((lot,li)=>{ const ws = arr(arr(L.win)[li]); return `<div class="wlot"><b>${lotLetter(lots,li)}</b>${G.mode==='rising'?`<span class="dim">${arr(L.line)[li]}点で</span>`:`<span class="dim">落札ライン ${arr(L.line)[li]}点</span>`}
         <div class="wnames">${ws.length?ws.slice(0,12).map(w=>`<span class="${w===i?'me':''}">${esc(seatName(G,w))}${G.mode==='rising'?'':` <i class="num">${arr(L.price)[w]}</i>`}</span>`).join('')+(ws.length>12?`<span>ほか${ws.length-12}人</span>`:''):'<span class="dim">落札者なし</span>'}</div></div>`; }).join('')}</div>
       ${i>=0?`<p class="mine">${myWonLot()>=0?`✅ あなたは${lots.length>1?lotLetter(lots,myWonLot())+'を':''}落札！`:arr(L.price)[i]>0?'落札ならず…':'見送り'}</p>`:''}`;
@@ -1256,7 +1362,7 @@ function renderFinal(){
   const i = myIdx(), purse = arr(G.purse);
   const myCard = i>=0 ? (()=>{ const s = styleOf(G, i); return `<section class="panel stylecard pop">
       <span class="eyebrow">あなたのプレイスタイル</span>
-      <p class="sname">${s.icon} ${esc(s.name)}</p>${s.sub?`<p class="dim">${esc(s.sub)}</p>`:''}
+      <p class="sname"><span class="emo">${s.icon}</span> ${esc(s.name)}</p>${s.sub?`<p class="dim">${esc(s.sub)}</p>`:''}
       <p>${esc(s.desc)}</p>
       <p class="dim" style="font-size:.85rem">入札額は平均で期待値の <b class="num">${s.bids?Math.round(s.avg*100):'−'}%</b> ・ 入札${s.bids}回／見送り${s.pass}回 ・ 期待値で見た損得 <b class="num ${s.evGain>=0?'plus':'minus'}">${sg(s.evGain)}</b>点（運を除いた、入札のうまさ）</p>
       <p class="tip">💡 ${esc(s.tip)}</p></section>`; })() : '';
@@ -1268,7 +1374,7 @@ function renderFinal(){
   const humans = seatsOf(G).map((s,j)=>j).sort((a,b)=>purse[b]-purse[a]);
   const humanTbl = !solo && H()>1 ? `<section class="panel"><span class="eyebrow">プレイヤーだけの順位</span><div class="tbl"><table><thead><tr><th>順</th><th>名前</th><th>持ち点</th><th>スタイル</th></tr></thead><tbody>${humans.map((j,r)=>`<tr class="${j===i?'me':''}"><td class="num">${r+1}</td><td>${esc(seatName(G,j))}</td><td class="num">${purse[j]}</td><td>${styleOf(G,j).icon}</td></tr>`).join('')}</tbody></table></div></section>` : '';
   const ts = teamScores(G, purse).sort((a,b)=>b.avg-a.avg);
-  app.innerHTML = cols(`<header class="title"><span class="eyebrow">FINAL RESULT</span><p class="big-result">${i<0?(ts.length?`🏆 ${TEAM_INFO[ts[0].t].name} の勝ち！`:'オークション終了'):rankOf(i)===1?'優勝！':`${rankOf(i)}位`}</p><div class="rule"></div>
+  app.innerHTML = cols(`<header class="title"><span class="eyebrow">FINAL RESULT</span><p class="big-result">${i<0?(ts.length?`<span class="emo">🏆</span> ${TEAM_INFO[ts[0].t].name} の勝ち！`:'オークション終了'):rankOf(i)===1?'優勝！':`${rankOf(i)}位`}</p><div class="rule"></div>
       ${i>=0?`<span class="num">持ち点 ${purse[i]}（${sg(purse[i]-START)}）・ ${G.n}人中</span>`:''}</header>
     ${myCard}${i<0?humanTbl:''}
     ${i>=0?`<section class="panel"><span class="eyebrow">あなたの入札</span><div class="tbl"><table><thead><tr><th>回</th><th>期待値</th><th>入札</th><th></th><th>損得</th></tr></thead><tbody>${hist}</tbody></table></div></section>`:''}`,
