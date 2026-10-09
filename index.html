@@ -1,0 +1,1316 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>期待値オークション</title>
+<meta name="description" content="くじの期待値を見ぬいて競り落とす、数学A「確率と期待値」の駆け引きゲーム">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#1a1113; --bg2:#0e090a; --panel:#24181a; --line:rgba(242,226,200,.16);
+  --paper:#f2e6cf; --paper-ink:#2a1d14; --paper-dim:#7a6450;
+  --text:#f4ece0; --dim:#b9a99a; --brass:#d6a957; --brass-dk:#9b7533;
+  --win:#7ed6a0; --lose:#ff9a8a; --you:#8fd3ff;
+  --f-disp:"Shippori Mincho B1","Hiragino Mincho ProN","Yu Mincho",serif;
+  --f-body:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic","Meiryo",sans-serif;
+  --f-num:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{min-height:100%}
+body{margin:0;background:radial-gradient(ellipse 120% 70% at 50% 0%,#3a1f22,var(--bg) 55%,var(--bg2));background-color:var(--bg);color:var(--text);font-family:var(--f-body);font-size:15px;line-height:1.65;padding-inline:16px;padding-block:20px 48px}
+.wrap{max-width:600px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+p{margin:0}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.dim{color:var(--dim)}
+h1{font-family:var(--f-disp);font-weight:800;font-size:clamp(2.2rem,10vw,3rem);margin:0;letter-spacing:.06em;line-height:1.15;text-align:center}
+h2{font-family:var(--f-disp);font-weight:800;font-size:1.35rem;margin:0}
+.eyebrow{font-size:.75rem;letter-spacing:.2em;color:var(--brass);font-weight:700}
+.title{display:flex;flex-direction:column;align-items:center;gap:6px;padding-block:12px 0}
+.title .rule{width:min(240px,70%);height:1px;background:linear-gradient(90deg,transparent,var(--brass),transparent)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+button{font:inherit;cursor:pointer;border-radius:8px;min-height:44px}
+button:focus-visible,input:focus-visible{outline:3px solid var(--brass);outline-offset:2px}
+.btn{background:var(--brass);color:#1d130b;border:none;font-weight:700;font-size:1.05rem;padding:10px 16px;width:100%}
+.btn:disabled{opacity:.45;cursor:default}
+.ghost{background:transparent;color:var(--text);border:1px solid var(--line);padding:8px 14px}
+input[type=range]{width:100%;accent-color:var(--brass);height:32px}
+.val{font-family:var(--f-num);font-size:1.4rem;font-weight:600;color:var(--brass)}
+ul.rules{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px;font-size:.9rem}
+
+/* 出品カード */
+.lot{background:var(--paper);color:var(--paper-ink);border-radius:12px;padding:18px 18px 16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 6px 0 rgba(0,0,0,.35);position:relative}
+.lot .no{font-family:var(--f-num);font-size:.8rem;color:var(--paper-dim);letter-spacing:.12em}
+.lot .how{font-family:var(--f-disp);font-weight:800;font-size:1.3rem;line-height:1.5;text-wrap:balance}
+.lot .prize{display:flex;align-items:baseline;gap:8px;border-top:1px dashed rgba(42,29,20,.3);padding-top:10px}
+.lot .prize b{font-family:var(--f-num);font-size:1.6rem}
+.lot .kind{position:absolute;top:14px;right:16px;font-size:1.6rem;line-height:1}
+
+/* 入札パドル */
+.bidnum{font-family:var(--f-num);font-size:3.6rem;font-weight:600;text-align:center;color:var(--brass);line-height:1.1}
+.steps{display:grid;grid-template-columns:repeat(6,1fr);gap:6px}
+.steps button{background:transparent;color:var(--text);border:1px solid var(--line);font-family:var(--f-num);font-weight:600;font-size:.9rem;padding:0}
+.purse{font-family:var(--f-num);font-size:1rem}
+.chip{font-size:.85rem;border:1px solid var(--line);border-radius:999px;padding:2px 12px}
+.chip.me{border-color:var(--brass);color:var(--brass);font-weight:700}
+
+/* 制限時間のゲージ */
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.seg button{background:transparent;color:var(--text);border:1px solid var(--line);font-weight:700}
+.seg button[aria-pressed="true"]{background:var(--brass);color:#1d130b;border-color:var(--brass)}
+.gauge{position:relative;height:30px;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid var(--line);overflow:hidden}
+.gauge .bar{position:absolute;inset:0 auto 0 0;width:100%;background:linear-gradient(90deg,var(--brass-dk),var(--brass));transition:width .1s linear}
+.gauge .left{position:absolute;inset:0;display:grid;place-items:center;font-weight:600;font-size:.9rem;color:var(--text);text-shadow:0 1px 2px rgba(0,0,0,.7)}
+.gauge.danger{border-color:#ff5a4a}
+.gauge.danger .bar{background:linear-gradient(90deg,#a3241a,#ff5a4a)}
+@media (prefers-reduced-motion: no-preference){
+  .gauge.danger{animation:blink .5s steps(2,start) infinite}
+  @keyframes blink{50%{opacity:.35}}
+}
+/* 演出 */
+.stage{position:fixed;inset:0;z-index:40;background:rgba(10,6,7,.94);display:grid;place-items:center;padding:20px;border:none;width:100%;color:var(--text);font:inherit}
+.stage .inner{display:flex;flex-direction:column;align-items:center;gap:18px;width:min(560px,100%)}
+.stage .cap{font-size:.85rem;letter-spacing:.14em;color:var(--brass);font-weight:700}
+.stage .what{font-family:var(--f-disp);font-weight:800;font-size:1.15rem;text-align:center;text-wrap:balance}
+.items{display:flex;flex-wrap:wrap;gap:14px;justify-content:center}
+.die{width:72px;height:72px;border-radius:14px;background:#fbf6ec;box-shadow:inset 0 -4px 0 #d9cdb6,0 4px 10px rgba(0,0,0,.5);display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:10px}
+.die i{width:13px;height:13px;border-radius:50%;background:#2a1d14;place-self:center;visibility:hidden}
+.die i.on{visibility:visible}
+.die.red i.on.c{background:#c0392b}
+.coin{width:72px;height:72px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-disp);font-weight:800;font-size:1.5rem;border:3px solid #8c6a2a}
+.coin.h{background:radial-gradient(circle at 35% 30%,#ffe7a3,#d6a957);color:#4a3210}
+.coin.t{background:radial-gradient(circle at 35% 30%,#e8e0d0,#a89c88);color:#3b342a}
+.ball{width:62px;height:62px;border-radius:50%;display:grid;place-items:center;font-weight:700}
+.ball.r{background:radial-gradient(circle at 35% 30%,#ff8b7a,#c0392b);color:#fff}
+.ball.w{background:radial-gradient(circle at 35% 30%,#ffffff,#cfc8bc);color:#2a1d14}
+.ball.q{background:#3a2a2c;color:var(--dim);border:2px dashed var(--line)}
+.card{width:64px;height:88px;border-radius:8px;background:#fbf6ec;color:#2a1d14;display:grid;place-items:center;font-family:var(--f-num);font-weight:600;font-size:1.5rem;box-shadow:0 4px 10px rgba(0,0,0,.5)}
+.card.redsuit{color:#c0392b}
+.card.back{background:repeating-linear-gradient(45deg,#7a2f35,#7a2f35 6px,#5e2329 6px,#5e2329 12px);color:transparent}
+.payout{font-family:var(--f-disp);font-weight:800;font-size:clamp(2.6rem,12vw,4rem);line-height:1}
+.payout.hit{color:var(--win)} .payout.miss{color:var(--lose)}
+.stage .hint{font-size:.8rem;color:var(--dim)}
+@media (prefers-reduced-motion: no-preference){
+  .rolling .die,.rolling .coin,.rolling .card,.rolling .ball{animation:shake .16s infinite}
+  @keyframes shake{0%{transform:rotate(-8deg) translateY(-3px)}50%{transform:rotate(8deg) translateY(2px)}100%{transform:rotate(-8deg) translateY(-3px)}}
+  .settle{animation:settle .35s cubic-bezier(.2,.9,.3,1.4)}
+  @keyframes settle{from{transform:scale(1.25)}to{transform:none}}
+  .pop{animation:pop .3s ease}
+  @keyframes pop{from{transform:translateY(5px);opacity:.5}to{transform:none;opacity:1}}
+}
+
+/* 結果 */
+.chart{width:100%;height:auto;display:block}
+.calc{font-family:var(--f-num);font-size:.86rem;line-height:1.9;overflow-x:auto}
+.calc .k{font-family:var(--f-body);color:var(--dim)}
+.hl{color:var(--brass);font-weight:600}
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th,td{padding:6px 4px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+th:first-child,td:first-child,th:nth-child(2),td:nth-child(2){text-align:left}
+th{font-size:.75rem;color:var(--dim);font-weight:700}
+tr.me td{color:var(--you);font-weight:700}
+tr.gap td{text-align:center;color:var(--dim);border-bottom:none}
+tr.line td{border-bottom:2px solid var(--brass)}
+.plus{color:var(--win)} .minus{color:var(--lose)}
+.tag{font-size:.72rem;color:var(--dim);margin-left:4px}
+.won{display:inline-block;font-size:.72rem;font-weight:700;background:var(--brass);color:#1d130b;border-radius:4px;padding:0 6px;margin-left:4px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.8rem;color:var(--dim)}
+.legend i{display:inline-block;width:12px;height:12px;vertical-align:-1px;margin-right:4px;border-radius:2px}
+.big-result{font-family:var(--f-disp);font-weight:800;font-size:2.4rem;text-align:center;margin:0}
+
+/* タブレット以上：左右2列でページをスクロールさせない */
+.cols,.col{display:flex;flex-direction:column;gap:14px;min-width:0}
+@media (min-width:760px) and (min-height:560px){
+  html,body{height:100%}
+  body:has(.cols){overflow:hidden;padding-block:14px}
+  body:has(.cols) .wrap{max-width:1240px;height:100%}
+  .cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;height:100%;min-height:0;align-items:start}
+  .col{overflow-y:auto;max-height:100%;min-height:0;padding-right:4px;scrollbar-width:thin}
+  .col > *{flex-shrink:0}
+}
+/* ---- 追加：入力・ロビー ---- */
+input[type=text]{width:100%;font:inherit;font-size:1.1rem;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--text)}
+.join-row{display:flex;gap:8px}.join-row input{flex:1;min-width:0;text-align:center;letter-spacing:.3em;font-family:var(--f-num);font-size:1.4rem}.join-row .btn{width:auto;padding:0 22px}
+.err{color:var(--lose);font-size:.85rem;min-height:1.2em}
+.check{display:flex;gap:8px;align-items:flex-start;font-size:.88rem}.check input{margin-top:5px}
+.players{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(7.5rem,1fr));gap:6px}
+.players li{background:rgba(255,255,255,.06);border-radius:6px;padding:4px 8px;font-size:.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.players li.me{color:var(--you);font-weight:700}
+.code{font-family:var(--f-num);font-size:clamp(3rem,14vw,5.5rem);font-weight:600;letter-spacing:.15em;color:var(--brass);margin:0;line-height:1.1}
+.center{text-align:center;align-items:center}
+.status{color:var(--dim);font-size:.9rem;text-align:center}
+.title.sm h1{font-size:clamp(1.6rem,7vw,2.2rem)}
+.seg{grid-template-columns:repeat(auto-fit,minmax(0,1fr))}
+.ghost:disabled{opacity:.4;cursor:default}
+.btn.danger{background:#ff6b5a;color:#fff}
+.big-btn{font-size:1.5rem;min-height:72px}
+
+/* ---- 上の帯 ---- */
+.topbar .chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chip b{color:var(--brass)}
+.mute{background:transparent;border:1px solid var(--line);color:var(--text);min-height:30px;padding:0 8px;border-radius:999px}
+.rbs{display:flex;gap:6px;flex-wrap:wrap}
+.rb{font-size:.8rem;font-weight:700;border-radius:999px;padding:3px 12px}
+.rb.dbl{background:#3b2a52;color:#d6c2ff}.rb.fin{background:#5a1f1a;color:#ffb199}.rb.rise{background:#1f3b2c;color:#9fe3bb}
+
+/* ---- くじ（2択はタップで選ぶ） ---- */
+.lots{display:flex;flex-direction:column;gap:12px}
+.lots.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.lots.two .lot .how{font-size:1.02rem}
+.lots.two .lot{padding:14px 12px}
+.lots.two .lot .prize{flex-direction:column;gap:0}
+.lots.two .lot .prize b{font-size:1.02rem;line-height:1.4}
+.lot.sel{text-align:left;font:inherit;border:3px solid transparent;cursor:pointer;width:100%}
+.lot.sel.on{border-color:var(--brass);box-shadow:0 0 0 3px rgba(214,169,87,.35),0 6px 0 rgba(0,0,0,.35)}
+.lot .pickme{font-size:.82rem;font-weight:700;color:var(--brass-dk)}
+.lot.jackpot{background:linear-gradient(160deg,#fff3c9,#f2d27a);}
+.lot.minus{background:linear-gradient(160deg,#f2e6cf,#e9c8c0)}
+.tags{display:flex;gap:4px;flex-wrap:wrap;min-height:0}
+.ltag{font-size:.72rem;font-weight:800;border-radius:4px;padding:1px 6px;font-family:var(--f-body)}
+.ltag.jp{background:#ff4fd8;color:#fff}.ltag.mi{background:#2a1d14;color:#ffb199}.ltag.x2{background:#c0392b;color:#fff}
+.eyebrow .ltag{letter-spacing:0}
+
+/* ---- ヒント ---- */
+.hintbtns{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.hintbtns button{font-size:.85rem;font-weight:700}
+.hint-lot{padding:4px 0;border-bottom:1px dashed var(--line)}
+.hint-lot:last-child{border-bottom:none}
+
+/* ---- 入札 ---- */
+.bigcount{font-family:var(--f-num);font-size:clamp(3rem,10vw,6rem);color:var(--brass);margin:0;line-height:1}
+.bigcount small{font-size:.4em;color:var(--dim)}
+
+/* ---- せり上げ ---- */
+.risebox .price{font-family:var(--f-num);font-size:clamp(3.4rem,14vw,6.5rem);color:var(--brass);margin:0;line-height:1;font-weight:600}
+.risebox .price small{font-size:.28em;color:var(--dim);margin-left:4px}
+.evline{display:flex;gap:12px;justify-content:center;font-size:.8rem;color:var(--dim);flex-wrap:wrap}
+.alive{font-size:1rem}.alive b{color:var(--brass);font-size:1.4rem}
+
+/* ---- 結果発表 ---- */
+.stage{position:fixed;inset:0;z-index:40;background:radial-gradient(ellipse at 50% 30%,#2c1719,rgba(10,6,7,.97));display:grid;place-items:center;padding:20px;border:none;width:100%;color:var(--text);font:inherit;cursor:default}
+.countdown{font-family:var(--f-num);font-size:clamp(6rem,30vw,12rem);color:var(--brass);margin:0;line-height:1;animation:pop .4s ease}
+.gavel{font-family:var(--f-disp);font-weight:800;font-size:clamp(2.4rem,11vw,4.5rem);margin:0;color:var(--brass);animation:gavel .5s cubic-bezier(.2,.9,.3,1.4)}
+@keyframes gavel{from{transform:rotate(-25deg) scale(1.6);opacity:0}to{transform:none;opacity:1}}
+.winners{display:flex;flex-direction:column;gap:10px;width:100%}
+.wlot{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:4px;text-align:left}
+.wlot b{color:var(--brass)}
+.wnames{display:flex;flex-wrap:wrap;gap:4px}
+.wnames span{background:rgba(214,169,87,.16);border-radius:4px;padding:1px 8px;font-size:.88rem;animation:pop .3s both}
+.wnames span.me{background:var(--you);color:#08202c;font-weight:800}
+.wnames i{font-style:normal;color:var(--dim);font-family:var(--f-num);font-size:.8em}
+.mine{font-weight:800;font-size:1.2rem}
+.draws{display:flex;flex-direction:column;gap:18px;width:100%;align-items:center}
+.draws.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.draw{display:flex;flex-direction:column;align-items:center;gap:10px}
+.draws.two .die,.draws.two .coin{width:54px;height:54px}.draws.two .die{padding:7px}.draws.two .die i{width:10px;height:10px}
+.payout.neg{color:#ff6b5a}
+.ball.k{background:radial-gradient(circle at 35% 30%,#666,#111);color:#fff}
+
+/* ---- 結果 ---- */
+.tbar{display:grid;grid-template-columns:8.5rem 1fr 3.4rem;gap:8px;align-items:center;font-size:.9rem}
+.tbar div{height:14px;background:rgba(255,255,255,.07);border-radius:999px;overflow:hidden}
+.tbar i{display:block;height:100%;border-radius:999px;transition:width .6s}
+.tbar b{text-align:right}
+.tdot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
+.feed p{border-left:3px solid var(--brass);padding:2px 8px;background:rgba(255,255,255,.04);animation:pop .4s both;font-size:.92rem}
+.stylecard{background:linear-gradient(160deg,#2f1f22,#24181a);border-color:var(--brass)}
+.stylecard .sname{font-family:var(--f-disp);font-weight:800;font-size:1.7rem;color:var(--brass)}
+.stylecard .tip{font-size:.88rem;color:var(--win)}
+
+/* ---- 花吹雪・帯 ---- */
+.confetti{position:fixed;inset:0;pointer-events:none;z-index:60;overflow:hidden}
+.confetti i{position:absolute;top:-12px;width:9px;height:14px;border-radius:2px;animation:fall linear forwards}
+@keyframes fall{to{top:110%;transform:rotate(720deg) translateX(40px)}}
+.band{position:fixed;left:0;right:0;top:32%;z-index:70;pointer-events:none;background:linear-gradient(90deg,transparent,var(--bc) 15%,var(--bc) 85%,transparent);color:#1d130b;text-align:center;padding:14px 10px;display:flex;flex-direction:column;animation:bandin 2s ease forwards}
+.band b{font-family:var(--f-disp);font-size:clamp(1.8rem,8vw,3.2rem);color:#fff;text-shadow:0 3px 0 rgba(0,0,0,.3)}
+.band span{font-weight:700;color:#fff}
+@keyframes bandin{0%{transform:translateX(-100%) skewX(-12deg)}12%{transform:none}85%{transform:none;opacity:1}100%{transform:translateX(100%);opacity:0}}
+
+/* ---- プロジェクター（ホストが参加しないとき・観戦） ---- */
+body.big{font-size:18px}
+body.big .lot .how{font-size:1.9rem}
+body.big .lots.two .lot .how{font-size:1.4rem}
+body.big .lot .prize b{font-size:2.2rem}
+body.big .risebox .price{font-size:clamp(5rem,12vw,9rem)}
+body.big .stage .what{font-size:1.6rem}
+body.big .wnames span{font-size:1.1rem}
+body.big .feed p{font-size:1.1rem}
+@media (min-width:760px){ body.big .wrap{max-width:1400px} }
+
+.lot .prize{flex-wrap:wrap}.lot .prize > span{white-space:nowrap}
+.wnames span.out{opacity:.55;text-decoration:line-through}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+(function(){
+/* ================= 小さな道具 ================= */
+const rint=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const shuffle=a=>{ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; };
+const gcd=(a,b)=>b?gcd(b,a%b):a;
+const C=(n,k)=>{ let r=1; for(let i=0;i<k;i++) r=r*(n-i)/(i+1); return Math.round(r); };
+const fr=(n,d)=>{ const g=gcd(Math.abs(n),Math.abs(d)); return [n/g,d/g]; };
+const frs=([n,d])=>d===1?`${n}`:`${n}/${d}`;
+const r1=x=>Math.round(x*10)/10;
+const sg=x=>x>0?`+${x}`:`${x}`;
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const arr=v=>Array.isArray(v)?v:(v&&typeof v==='object'?Object.keys(v).sort((a,b)=>a-b).map(k=>v[k]):[]);
+const SUITS=['♠','♥','♦','♣'];
+function roundPrize(target, p){ return Math.min(600, Math.max(10, Math.round(target/p/10)*10)); }   // ふつうのくじの賞金は最大600点
+
+/* ================= くじの種類 =================
+   出品するくじは「型(t)＋数(p)」だけを保存し、mkLot で中身を作り直す（オンラインで全員が同じくじを見るため）。
+   中身：how（説明）, prize（賞金の説明）, ev（期待値）, calc（計算：最後の行が期待値）, max/min（賞金の最大・最小）, tag（jackpot/minus）, draw()（実際に引く：ホストだけが呼ぶ） */
+const LT = {
+  sum:{ gen:()=>{ const k=rint(6,10); let c=0; for(let a=1;a<=6;a++) for(let b=1;b<=6;b++) if(a+b>=k) c++; return {k, P:roundPrize(rint(90,240), c/36)}; },
+    mk:({k,P})=>{ let c=0; for(let a=1;a<=6;a++) for(let b=1;b<=6;b++) if(a+b>=k) c++;
+      return {icon:'🎲', how:`サイコロを2個振る。<br>出た目の和が ${k} 以上なら当たり`, prize:`当たりで ${P}点`, ev:P*c/36, max:P, min:0,
+        calc:[`和が${k}以上になる目の組は ${c}通り（36通り中）`, `確率 ${frs(fr(c,36))}`, `期待値 = ${P} × ${frs(fr(c,36))} ≒ ${r1(P*c/36)}点`],
+        draw:()=>{ const d=[rint(1,6),rint(1,6)]; const hit=d[0]+d[1]>=k; return {faces:d.map(v=>({t:'die',v})), pay:hit?P:0, text:`和は ${d[0]+d[1]}`}; }}; } },
+  zoro:{ gen:()=>({P:roundPrize(rint(90,220), 1/6)}),
+    mk:({P})=>({icon:'🎲', how:'サイコロを2個振る。<br>ゾロ目なら当たり', prize:`当たりで ${P}点`, ev:P/6, max:P, min:0,
+      calc:['ゾロ目は (1,1)〜(6,6) の 6通り（36通り中）', '確率 1/6', `期待値 = ${P} × 1/6 ≒ ${r1(P/6)}点`],
+      draw:()=>{ const d=[rint(1,6),rint(1,6)]; const hit=d[0]===d[1]; return {faces:d.map(v=>({t:'die',v})), pay:hit?P:0, text:hit?'ゾロ目！':'ゾロ目ではない'}; }}) },
+  dmul:{ gen:()=>({m:rint(2,7)*10}),
+    mk:({m})=>({icon:'🎲', how:`サイコロを1個振る。<br>出た目 × ${m}点 がもらえる`, prize:`最低 ${m}点 ／ 最高 ${6*m}点`, ev:3.5*m, max:6*m, min:m,
+      calc:['出た目の期待値 = (1+2+3+4+5+6) ÷ 6 = 3.5', `期待値 = 3.5 × ${m} = ${r1(3.5*m)}点`],
+      draw:()=>{ const v=rint(1,6); return {faces:[{t:'die',v}], pay:v*m, text:`出た目は ${v}`}; }}) },
+  even:{ gen:()=>({P:roundPrize(rint(100,240), 27/36)}),
+    mk:({P})=>({icon:'🎲', how:'サイコロを2個振る。<br>出た目の積が偶数なら当たり', prize:`当たりで ${P}点`, ev:P*27/36, max:P, min:0,
+      calc:['積が奇数になるのは、2個とも奇数のときだけ：3×3 = 9通り', '積が偶数は 36 − 9 = 27通り → 確率 3/4', `期待値 = ${P} × 3/4 = ${r1(P*3/4)}点`],
+      draw:()=>{ const d=[rint(1,6),rint(1,6)]; const hit=(d[0]*d[1])%2===0; return {faces:d.map(v=>({t:'die',v})), pay:hit?P:0, text:`積は ${d[0]*d[1]}`}; }}) },
+  six3:{ gen:()=>({P:roundPrize(rint(100,220), 91/216)}),
+    mk:({P})=>({icon:'🎲', how:'サイコロを3回振る。<br>6 が1回でも出れば当たり', prize:`当たりで ${P}点`, ev:P*91/216, max:P, min:0,
+      calc:['余事象：3回とも6以外 → (5/6)³ = 125/216', '当たりの確率 = 1 − 125/216 = 91/216', `期待値 = ${P} × 91/216 ≒ ${r1(P*91/216)}点`],
+      draw:()=>{ const d=[rint(1,6),rint(1,6),rint(1,6)]; const hit=d.includes(6); return {faces:d.map(v=>({t:'die',v})), pay:hit?P:0, text:hit?'6が出た！':'6は出なかった'}; }}) },
+  coinmul:{ gen:()=>({n:rint(3,5), m:rint(3,8)*10}),
+    mk:({n,m})=>({icon:'🪙', how:`コインを${n}枚投げる。<br>表の枚数 × ${m}点 がもらえる`, prize:`最低 0点 ／ 最高 ${n*m}点`, ev:n/2*m, max:n*m, min:0,
+      calc:[`表の枚数の期待値 = ${n} × 1/2 = ${n/2}`, `期待値 = ${n/2} × ${m} = ${r1(n/2*m)}点`],
+      draw:()=>{ const c=Array.from({length:n},()=>Math.random()<.5); const k=c.filter(Boolean).length; return {faces:c.map(h=>({t:'coin',h})), pay:k*m, text:`表は ${k}枚`}; }}) },
+  coin2:{ gen:()=>({P:roundPrize(rint(90,220), 3/8)}),
+    mk:({P})=>({icon:'🪙', how:'コインを3回投げる。<br>表がちょうど2回なら当たり', prize:`当たりで ${P}点`, ev:P*3/8, max:P, min:0,
+      calc:['反復試行：₃C₂ × (1/2)² × (1/2)¹ = 3/8', `期待値 = ${P} × 3/8 = ${r1(P*3/8)}点`],
+      draw:()=>{ const c=[0,1,2].map(()=>Math.random()<.5); const k=c.filter(Boolean).length; return {faces:c.map(h=>({t:'coin',h})), pay:k===2?P:0, text:`表は ${k}回`}; }}) },
+  bag2:{ gen:()=>{ const a=rint(3,5), b=rint(3,6); return {a, b, P:roundPrize(rint(80,200), C(a,2)/C(a+b,2))}; },
+    mk:({a,b,P})=>{ const num=C(a,2), den=C(a+b,2);
+      return {icon:'👜', how:`赤玉${a}個・白玉${b}個の袋から<br>同時に2個取り出す。2個とも赤なら当たり`, prize:`当たりで ${P}点`, ev:P*num/den, max:P, min:0,
+        calc:[`取り出し方の総数 ${a+b}C2 = ${den}通り`, `2個とも赤 ${a}C2 = ${num}通り → 確率 ${frs(fr(num,den))}`, `期待値 = ${P} × ${frs(fr(num,den))} ≒ ${r1(P*num/den)}点`],
+        draw:()=>{ const bag=shuffle([...Array(a).fill('r'),...Array(b).fill('w')]); const g=bag.slice(0,2); const hit=g.every(x=>x==='r'); return {faces:g.map(c=>({t:'ball',c})), pay:hit?P:0, text:hit?'2個とも赤！':'2個とも赤ではない'}; }}; } },
+  bag1:{ gen:()=>{ const a=rint(2,5), b=rint(4,8); return {a, b, P:roundPrize(rint(90,220), a/(a+b))}; },
+    mk:({a,b,P})=>({icon:'👜', how:`赤玉${a}個・白玉${b}個の袋から<br>1個取り出す。赤なら当たり`, prize:`当たりで ${P}点`, ev:P*a/(a+b), max:P, min:0,
+      calc:[`赤の確率 = ${a}/${a+b}${gcd(a,a+b)>1?` = ${frs(fr(a,a+b))}`:''}`, `期待値 = ${P} × ${frs(fr(a,a+b))} ≒ ${r1(P*a/(a+b))}点`],
+      draw:()=>{ const hit=Math.random()<a/(a+b); return {faces:[{t:'ball',c:hit?'r':'w'}], pay:hit?P:0, text:hit?'赤！':'白'}; }}) },
+  card:{ gen:()=>({m:rint(2,4)*10}),
+    mk:({m})=>({icon:'🃏', how:`1〜10のカードから1枚引く。<br>出た数 × ${m}点 がもらえる`, prize:`最低 ${m}点 ／ 最高 ${10*m}点`, ev:5.5*m, max:10*m, min:m,
+      calc:['出る数の期待値 = (1+2+…+10) ÷ 10 = 5.5', `期待値 = 5.5 × ${m} = ${r1(5.5*m)}点`],
+      draw:()=>{ const v=rint(1,10); return {faces:[{t:'card',v:String(v)}], pay:v*m, text:`出た数は ${v}`}; }}) },
+  prime:{ gen:()=>({P:roundPrize(rint(90,220), 4/10)}),
+    mk:({P})=>({icon:'🃏', how:'1〜10のカードから1枚引く。<br>素数なら当たり', prize:`当たりで ${P}点`, ev:P*0.4, max:P, min:0,
+      calc:['1〜10の素数は 2, 3, 5, 7 の4枚', '確率 4/10 = 2/5', `期待値 = ${P} × 2/5 = ${r1(P*0.4)}点`],
+      draw:()=>{ const v=rint(1,10); const hit=[2,3,5,7].includes(v); return {faces:[{t:'card',v:String(v)}], pay:hit?P:0, text:hit?`${v} は素数！`:`${v} は素数ではない`}; }}) },
+  face:{ gen:()=>({P:roundPrize(rint(90,220), 12/52)}),
+    mk:({P})=>({icon:'🃏', how:'トランプ52枚から1枚引く。<br>絵札（J・Q・K）なら当たり', prize:`当たりで ${P}点`, ev:P*12/52, max:P, min:0,
+      calc:['絵札は 3種類 × 4マーク = 12枚', '確率 12/52 = 3/13', `期待値 = ${P} × 3/13 ≒ ${r1(P*3/13)}点`],
+      draw:()=>{ const r=rint(1,13), s=pick(SUITS); const lab=({1:'A',11:'J',12:'Q',13:'K'})[r]||String(r); const hit=r>=11; return {faces:[{t:'card',v:s+lab, red:s==='♥'||s==='♦'}], pay:hit?P:0, text:hit?'絵札！':'絵札ではない'}; }}) },
+
+  /* ---- ジャックポット：当たればでかいが、めったに当たらない ---- */
+  jtri:{ jack:true, gen:()=>({P:rint(30,40)*100}),
+    mk:({P})=>({icon:'🎰', tag:'jackpot', how:'サイコロを3個振る。<br>3個とも同じ目なら大当たり', prize:`大当たりで ${P}点`, ev:P/36, max:P, min:0,
+      calc:['3個とも同じ目は (1,1,1)〜(6,6,6) の 6通り（6³ = 216通り中）', '確率 6/216 = 1/36', `期待値 = ${P} × 1/36 ≒ ${r1(P/36)}点`],
+      draw:()=>{ const d=[rint(1,6),rint(1,6),rint(1,6)]; const hit=d[0]===d[1]&&d[1]===d[2]; return {faces:d.map(v=>({t:'die',v})), pay:hit?P:0, text:hit?'3個そろった！！':'そろわなかった'}; }}) },
+  jsix:{ jack:true, gen:()=>({P:rint(10,14)*1000}),
+    mk:({P})=>({icon:'🎰', tag:'jackpot', how:'サイコロを3個振る。<br>3個とも 6 なら超大当たり', prize:`超大当たりで ${P}点`, ev:P/216, max:P, min:0,
+      calc:['3個とも6は (6,6,6) の 1通り（216通り中）', '確率 (1/6)³ = 1/216', `期待値 = ${P} × 1/216 ≒ ${r1(P/216)}点`],
+      draw:()=>{ const d=[rint(1,6),rint(1,6),rint(1,6)]; const hit=d.every(v=>v===6); return {faces:d.map(v=>({t:'die',v})), pay:hit?P:0, text:hit?'6が3つ！！！':'6が3つそろわなかった'}; }}) },
+  jheart:{ jack:true, gen:()=>({P:rint(40,60)*100}),
+    mk:({P})=>({icon:'🎰', tag:'jackpot', how:'トランプ52枚から1枚引く。<br>ハートのA（エース）なら大当たり', prize:`大当たりで ${P}点`, ev:P/52, max:P, min:0,
+      calc:['ハートのAは 52枚中 1枚', '確率 1/52', `期待値 = ${P} × 1/52 ≒ ${r1(P/52)}点`],
+      draw:()=>{ const r=rint(1,13), s=pick(SUITS); const lab=({1:'A',11:'J',12:'Q',13:'K'})[r]||String(r); const hit=r===1&&s==='♥'; return {faces:[{t:'card',v:s+lab, red:s==='♥'||s==='♦'}], pay:hit?P:0, text:hit?'ハートのA！！':`${s}${lab}`}; }}) },
+  jcoin:{ jack:true, gen:()=>({P:rint(56,72)*100}),
+    mk:({P})=>({icon:'🎰', tag:'jackpot', how:'コインを6枚投げる。<br>6枚とも表なら大当たり', prize:`大当たりで ${P}点`, ev:P/64, max:P, min:0,
+      calc:['6枚とも表は 2⁶ = 64通り中 1通り', '確率 (1/2)⁶ = 1/64', `期待値 = ${P} × 1/64 ≒ ${r1(P/64)}点`],
+      draw:()=>{ const c=Array.from({length:6},()=>Math.random()<.5); const k=c.filter(Boolean).length; return {faces:c.map(h=>({t:'coin',h})), pay:k===6?P:0, text:k===6?'6枚とも表！！':`表は ${k}枚`}; }}) },
+
+  /* ---- マイナスくじ：点数が減ることもある ---- */
+  mdie:{ minus:true, gen:()=>({A:rint(30,50)*10, B:rint(20,45)*10, s:rint(2,8)*10}),
+    mk:({A,B,s})=>{ const ev=(A-B+4*s)/6;
+      return {icon:'💣', tag:'minus', how:`サイコロを1個振る。<br>6なら +${A}点、1なら −${B}点、<br>それ以外は +${s}点`, prize:`最高 +${A}点 ／ 最低 −${B}点`, ev, max:A, min:-B,
+        calc:['6が出る確率 1/6、1が出る確率 1/6、2〜5が出る確率 4/6', `期待値 = ${A}×1/6 + (−${B})×1/6 + ${s}×4/6`, `= (${A} − ${B} + ${4*s}) ÷ 6 ≒ ${r1(ev)}点`],
+        draw:()=>{ const v=rint(1,6); const pay=v===6?A:v===1?-B:s; return {faces:[{t:'die',v}], pay, text:`出た目は ${v}`}; }}; } },
+  mcoin:{ minus:true, gen:()=>({A:rint(40,70)*10, B:rint(30,60)*10, c:rint(3,8)*10}),
+    mk:({A,B,c})=>{ const ev=(A-B+6*c)/8;
+      return {icon:'💣', tag:'minus', how:`コインを3枚投げる。<br>3枚とも表なら +${A}点、3枚とも裏なら −${B}点、<br>それ以外は +${c}点`, prize:`最高 +${A}点 ／ 最低 −${B}点`, ev, max:A, min:-B,
+        calc:['全部で 2³ = 8通り。3枚とも表 1通り、3枚とも裏 1通り、それ以外 6通り', `期待値 = ${A}×1/8 + (−${B})×1/8 + ${c}×6/8`, `= (${A} − ${B} + ${6*c}) ÷ 8 ≒ ${r1(ev)}点`],
+        draw:()=>{ const f=[0,1,2].map(()=>Math.random()<.5); const k=f.filter(Boolean).length; const pay=k===3?A:k===0?-B:c; return {faces:f.map(h=>({t:'coin',h})), pay, text:`表は ${k}枚`}; }}; } },
+  mbag:{ minus:true, gen:()=>({r:rint(2,4), w:rint(3,5), k:rint(1,2), X:rint(20,40)*10, Y:rint(25,50)*10}),
+    mk:({r,w,k,X,Y})=>{ const N=r+w+k, ev=(r*X-k*Y)/N;
+      return {icon:'💣', tag:'minus', how:`赤玉${r}個・白玉${w}個・黒玉${k}個の袋から1個取り出す。<br>赤なら +${X}点、白は 0点、黒なら −${Y}点`, prize:`最高 +${X}点 ／ 最低 −${Y}点`, ev, max:X, min:-Y,
+        calc:[`赤の確率 ${frs(fr(r,N))}、白 ${frs(fr(w,N))}、黒 ${frs(fr(k,N))}`, `期待値 = ${X}×${r}/${N} + 0×${w}/${N} + (−${Y})×${k}/${N}`, `= (${r*X} − ${k*Y}) ÷ ${N} ≒ ${r1(ev)}点`],
+        draw:()=>{ const x=rint(1,N); const c=x<=r?'r':x<=r+w?'w':'k'; return {faces:[{t:'ball',c}], pay:c==='r'?X:c==='k'?-Y:0, text:c==='r'?'赤！':c==='k'?'黒…':'白'}; }}; } },
+  mcard:{ minus:true, gen:()=>({X:rint(15,30)*10, Y:rint(30,70)*10}),
+    mk:({X,Y})=>{ const ev=(4*X-2*Y)/10;
+      return {icon:'💣', tag:'minus', how:`1〜10のカードから1枚引く。<br>素数なら +${X}点、9か10なら −${Y}点、<br>それ以外は 0点`, prize:`最高 +${X}点 ／ 最低 −${Y}点`, ev, max:X, min:-Y,
+        calc:['素数は 2,3,5,7 の4枚、9と10 は2枚、それ以外（1,4,6,8）は4枚', `期待値 = ${X}×4/10 + (−${Y})×2/10 + 0×4/10`, `= (${4*X} − ${2*Y}) ÷ 10 = ${r1(ev)}点`],
+        draw:()=>{ const v=rint(1,10); const pay=[2,3,5,7].includes(v)?X:v>=9?-Y:0; return {faces:[{t:'card',v:String(v)}], pay, text:`出た数は ${v}`}; }}; } },
+};
+const NORMAL_T = Object.keys(LT).filter(k=>!LT[k].jack && !LT[k].minus);
+const JACK_T = Object.keys(LT).filter(k=>LT[k].jack);
+const MINUS_T = Object.keys(LT).filter(k=>LT[k].minus);
+const lotCache = new Map();
+/* spec {t, p} → くじ。mult（最終ラウンドの2倍）は賞金にかける */
+function mkLot(spec, mult){
+  const key = JSON.stringify(spec)+'|'+(mult||1);
+  if(lotCache.has(key)) return lotCache.get(key);
+  const b = LT[spec.t].mk(spec.p), m = mult||1;
+  const lot = Object.assign({}, b, {t:spec.t, mult:m, ev:b.ev*m, max:b.max*m, min:b.min*m,
+    calc: m>1 ? b.calc.slice(0,-1).concat([b.calc[b.calc.length-1], `最終ラウンドは賞金2倍 → 期待値 ≒ ${r1(b.ev*m)}点`]) : b.calc,
+    prize: m>1 ? `${b.prize}（の2倍！）` : b.prize,
+    draw: ()=>{ const r=b.draw(); return Object.assign(r, {pay:r.pay*m}); }});
+  lotCache.set(key, lot);
+  return lot;
+}
+const newSpec = t => ({t, p:LT[t].gen()});
+
+/* ================= ゲームの組み立て =================
+   全6ラウンド。紙入札：1・2・4 は1つ、3・5 は「2択」（2つ同時出品、どちらか片方にだけ入札）、6 は最終ラウンド（賞金2倍）
+   せり上げ式：2択はなし（全部1つ）。ジャックポットは7割のゲームで1回、マイナスくじは1〜2回 */
+const ROUNDS = 6, START = 1000, MIN_N = 10, MAX_N = 50;
+const HINT_COST = [0, 10, 40];   // ヒント：1段目（確率まで）10点、2段目（期待値まで）合計40点
+function makePlan(mode){
+  const dbl = mode==='sealed' ? [false,false,true,false,true,false] : [false,false,false,false,false,false];
+  const lots = [];
+  const normals = shuffle(NORMAL_T);
+  let ni = 0;
+  const nextNormal = () => newSpec(normals[(ni++) % normals.length]);
+  const jackRound = Math.random()<0.7 ? rint(1,4) : -1;
+  const minusRounds = shuffle([1,2,3,4].filter(r=>r!==jackRound)).slice(0, rint(1,2));
+  for(let r=0;r<ROUNDS;r++){
+    const sp = [];
+    if(r===jackRound) sp.push(newSpec(pick(JACK_T)));
+    else if(minusRounds.includes(r)) sp.push(newSpec(pick(MINUS_T)));
+    else sp.push(nextNormal());
+    if(dbl[r]) sp.push(nextNormal());
+    lots.push(shuffle(sp));
+  }
+  return {lots, dbl};
+}
+const roundLots = (G, r) => arr(arr(G.lots)[r]).map(sp=>mkLot(sp, r===ROUNDS-1?2:1));
+const kOf = (n, nl) => Math.max(1, Math.round(n*(nl>1?0.1:0.2)));   // 1つなら2割、2択ならそれぞれ1割
+
+/* ================= CPU ================= */
+const TYPES={ calc:{label:'計算派', w:.42}, bold:{label:'強気派', w:.16}, safe:{label:'慎重派', w:.24}, rand:{label:'気まぐれ', w:.18} };
+function pickType(){ let r=Math.random(), a=0; for(const k in TYPES){ a+=TYPES[k].w; if(r<a) return k; } return 'calc'; }
+/* CPUの値ぶみ：くじにいくらまで出すか */
+function cpuValue(type, lot){
+  const ev = lot.ev;
+  if(type==='calc') return ev*(0.78+Math.random()*0.24);
+  if(type==='bold') return (lot.tag==='jackpot' ? ev*(1.4+Math.random()*1.2) : ev*(1.0+Math.random()*0.45));
+  if(type==='safe') return lot.min<0 ? (Math.random()<.6 ? 0 : ev*(0.2+Math.random()*0.3)) : ev*(0.35+Math.random()*0.4);
+  return Math.random()<.25 ? 0 : (lot.tag==='jackpot' ? ev*Math.random()*3 : ev*Math.random()*1.8);
+}
+/* 紙入札：{l:どのくじ, b:入札額}（b=0 は見送り） */
+function cpuBid(type, lots, purse){
+  if(purse<=0) return {l:-1, b:0};
+  const vals = lots.map(lot=>Math.max(0, cpuValue(type, lot)));
+  let l = 0; vals.forEach((v,i)=>{ if(v>vals[l]) l=i; });
+  if(lots.length>1 && Math.random()<.25) l = rint(0, lots.length-1);   // 2択はときどき気分で
+  let b = Math.round(vals[l]);
+  if(Math.random()<.08) b = 0;
+  b = Math.max(0, Math.min(purse, b));
+  return {l: b>0 ? l : -1, b};
+}
+
+/* ================= 入札の締め切り（紙入札） =================
+   bids[i] = {b, l, at}（l はくじ番号、b=0 は見送り）、hints[i] = 0〜2
+   2択のときは、くじごとに入札額の上位 k 人が落札。同額は先に入札した人が優先 */
+function settleSealed(G, bids, hints){
+  const r = G.round, lots = roundLots(G, r), n = G.n, nl = lots.length, k = kOf(n, nl);
+  const purse = arr(G.purse).slice();
+  const win = lots.map(()=>[]), line = lots.map(()=>0);
+  lots.forEach((lot, li)=>{
+    const cand = bids.map((x,i)=>({i, b:x.b, at:x.at})).filter((x,i)=>bids[i].l===li && x.b>0)
+      .sort((a,b)=>b.b-a.b || a.at-b.at);
+    win[li] = cand.slice(0,k).map(x=>x.i);
+    line[li] = cand.length>=k ? cand[k-1].b : (cand.length ? cand[cand.length-1].b : 0);
+  });
+  const res = lots.map(lot=>lot.draw());
+  return finishRound(G, lots, res, win, bids.map(x=>x.b), bids.map(x=>x.l), hints, line, purse, k);
+}
+/* 共通：点数を動かして、実況と記録を作る */
+function finishRound(G, lots, res, win, price, lsel, hints, line, purse, k){
+  const n = G.n, before = purse.slice();
+  const delta = new Array(n).fill(0);
+  for(let i=0;i<n;i++){ const h = hints[i]||0; delta[i] -= HINT_COST[h]; }
+  win.forEach((ws, li)=>ws.forEach(i=>{ delta[i] += res[li].pay - price[i]; }));
+  for(let i=0;i<n;i++) purse[i] = before[i] + delta[i];
+  const last = {round:G.round, price, lsel, hints:hints.map(h=>h||0), win, res, line, delta, k,
+    ev: lots.map(l=>r1(l.ev)), cm: commentary(G, lots, res, win, price, lsel, before, purse)};
+  const hist = arr(G.hist).slice(); hist.push({ev:last.ev, price, lsel, win, hints:last.hints, delta, tag:lots.map(l=>l.tag||''), pay:res.map(x=>x.pay)});
+  return Object.assign({}, G, {purse, last, hist});
+}
+
+/* ================= 実況 ================= */
+function commentary(G, lots, res, win, price, lsel, before, after){
+  const out = [], nm = i => seatName(G, i);
+  const allWin = [].concat(...win);
+  if(!allWin.length) out.push('😶 だれも落札しなかった！ 全員見送りの大波乱');
+  lots.forEach((lot, li)=>{
+    const ws = win[li]; if(!ws.length) return;
+    const lab = lots.length>1 ? `くじ${'AB'[li]}：` : '';
+    const avgP = ws.reduce((a,i)=>a+price[i],0)/ws.length;
+    if(lot.ev>0) out.push(`📊 ${lab}期待値 ${r1(lot.ev)}点 に対して、落札額は平均 ${Math.round(avgP)}点（期待値の${Math.round(avgP/lot.ev*100)}%）`);
+    const ratio = i => lot.ev>0 ? price[i]/lot.ev : 99;
+    const hi = ws.slice().sort((a,b)=>ratio(b)-ratio(a))[0], lo = ws.slice().sort((a,b)=>ratio(a)-ratio(b))[0];
+    if(lot.ev>0 && ratio(hi)>=1.5) out.push(`🔥 ${lab}${nm(hi)}、期待値の${r1(ratio(hi))}倍（${price[hi]}点）で強気の落札！`);
+    if(lot.ev>0 && ratio(lo)<=0.7 && lo!==hi) out.push(`💰 ${lab}${nm(lo)}は期待値の${Math.round(ratio(lo)*100)}%（${price[lo]}点）でお買い得に落札`);
+    if(lot.tag==='jackpot') out.push(res[li].pay>0 ? `🎰 ジャックポット的中！！ 落札した${ws.length}人に ${res[li].pay}点！` : `🎰 ジャックポットははずれ…落札した${ws.length}人は入札額がまるごと損`);
+    if(lot.tag==='minus' && res[li].pay<0) out.push(`💥 マイナスくじ炸裂…落札した${ws.length}人は ${res[li].pay}点`);
+    if(lot.tag==='minus' && lot.ev<=0) out.push(`🧮 ${lab}このくじの期待値は ${r1(lot.ev)}点。見送りが正解だった！`);
+  });
+  if(lots.length>1){
+    const ca = lsel.filter(x=>x===0).length, cb = lsel.filter(x=>x===1).length;
+    out.push(`🗳 くじAに${ca}人、くじBに${cb}人が入札。人気は${ca===cb?'まっぷたつ':ca>cb?'A':'B'}！`);
+  }
+  const top0 = before.indexOf(Math.max(...before)), top1 = after.indexOf(Math.max(...after));
+  if(G.round>0 && top0!==top1) out.push(`👑 首位交代！ ${nm(top1)}がトップに（${after[top1]}点）`);
+  const tms = teamScores(G, after);
+  if(tms.length){ const t = tms.slice().sort((a,b)=>b.avg-a.avg)[0]; out.push(`🚩 いまのトップは ${TEAM_INFO[t.t].name}（平均 ${Math.round(t.avg)}点）`); }
+  return out.slice(0, 7);
+}
+
+/* ================= 班対抗 ================= */
+const TEAM_INFO = [{name:'赤チーム', color:'#ff6b6b'}, {name:'青チーム', color:'#5aa9ff'}, {name:'黄チーム', color:'#ffd166'}, {name:'緑チーム', color:'#5fd39a'}];
+const seatsOf = G => arr(G.seats);
+const seatName = (G, i) => { const s = seatsOf(G)[i]; return s ? s[1] : `CPU-${String(i-seatsOf(G).length+1).padStart(2,'0')}`; };
+function teamScores(G, purse){
+  if(!G.teams) return [];
+  const out = [];
+  for(let t=0;t<G.teams;t++){ const mem = seatsOf(G).map((s,i)=>s[2]===t?i:-1).filter(i=>i>=0); if(mem.length) out.push({t, n:mem.length, avg:mem.reduce((a,i)=>a+purse[i],0)/mem.length}); }
+  return out;
+}
+
+/* ================= プレイスタイル診断 ================= */
+function styleOf(G, i){
+  const H = arr(G.hist);
+  let bids = 0, pass = 0, ratioSum = 0, jackHigh = 0, minusPass = 0, minusSeen = 0, hintN = 0, evGain = 0;
+  H.forEach(h=>{
+    const price = arr(h.price), lsel = arr(h.lsel), ev = arr(h.ev), tag = arr(h.tag), win = arr(h.win).map(arr);
+    const p = price[i]||0, l = lsel[i];
+    if((arr(h.hints)[i]||0)>0) hintN++;
+    if(tag.includes('minus')){ minusSeen++; if(p===0 || tag[l]!=='minus') minusPass++; }
+    if(p>0 && l>=0){
+      bids++; if(ev[l]>0) ratioSum += p/ev[l];
+      if(tag[l]==='jackpot' && ev[l]>0 && p/ev[l]>=1.3) jackHigh++;
+      if(win[l] && win[l].includes(i)) evGain += ev[l]-p;
+    } else pass++;
+  });
+  const R = H.length || 1, avg = bids ? ratioSum/bids : 0;
+  let s;
+  if(pass/R >= 0.6) s = {id:'pass', icon:'🧊', name:'慎重すぎる見送り王', desc:'ほとんど見送って点数を守った。損はしないけど、期待値より安いくじも逃しているかも。', tip:'期待値の8割くらいで入札してみよう'};
+  else if(avg>=1.25 || jackHigh>0) s = {id:'gamble', icon:'🎲', name:'ギャンブラー', desc:'期待値より高くても、夢のあるくじに飛びついた。当たれば大きいけど、くり返すと損がたまる。', tip:'入札額が期待値をこえていないか確かめよう'};
+  else if(avg>=0.85 && avg<=1.1 && evGain>=0) s = {id:'ev', icon:'🧮', name:'期待値の申し子', desc:'期待値ぴったりのところで勝負できている。長い目で見ると一番強いタイプ。', tip:'2択ではライバルの少ない方をねらうともっと勝てる'};
+  else if(avg<0.85) s = {id:'invest', icon:'💼', name:'堅実な投資家', desc:'期待値より安く買うことを徹底。落札は少なめでも、買ったくじは得なものばかり。', tip:'ライバルが多いときは少しだけ強気に'};
+  else s = {id:'balance', icon:'⚖️', name:'バランス型', desc:'強気と慎重を使い分けた。くじによって態度を変えられている。', tip:'期待値とのずれを結果画面で見直してみよう'};
+  if(hintN >= Math.ceil(R/2)) s = Object.assign({}, s, {sub:'📖 情報通（ヒントをよく買った）'});
+  else if(minusSeen && minusPass===minusSeen) s = Object.assign({}, s, {sub:'🛡 マイナスくじは全部よけた'});
+  return Object.assign(s, {avg, evGain:r1(evGain), bids, pass});
+}
+const STYLE_IDS = ['ev','invest','balance','gamble','pass'];
+/* ================= Firebase 設定 ================= */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyC3__kwx4TH-ezcCCUWcb_J7PWZ7pDUjDc",
+  authDomain: "asumath-games.firebaseapp.com",
+  databaseURL: "https://asumath-games-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "asumath-games",
+  storageBucket: "asumath-games.firebasestorage.app",
+  messagingSenderId: "254715782397",
+  appId: "1:254715782397:web:bda2fd2283b292db050a94"
+};
+const ROOT = 'games/auction/rooms';
+const ROOM_TTL = 6*60*60*1000;
+const ENTRY_MS = 6000;          // せり上げ式：参加受付の時間
+const RISE_TICK = 900;          // せり上げ式：値段が上がる間隔
+const SHOW_COUNT = 2400, SHOW_REVEAL = 2400, SHOW_DRAW = 4300;   // 結果発表の段取り（ms）
+const showEnd = G => SHOW_DRAW + 700 + Math.max(...arr(G.last && G.last.res).map(r=>arr(r.faces).length), 1)*380 + 700;
+const CPU_CH = {c:'calc', b:'bold', s:'safe', r:'rand'};
+
+/* ================= 共通 ================= */
+const app = document.getElementById('app');
+const ls = { get(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }, set(k,v){ try{ localStorage.setItem(k,v); }catch(e){} } };
+let db=null, uid=null, offset=0, fbError='';
+const now = () => Date.now() + offset;
+let nick = ls.get('ev-auction-nick');
+let screen = 'home';           // home | solo | lobby | game
+let solo = false, code = '', meta = null, players = {}, G = null;
+let isHost = false, hostPlays = true, homeErr = '';
+let unsub = [];
+const HOST = { target:30, limit:45, mode:'sealed', teams:0, closing:false, subCount:0, subRef:null, riseRef:null, riseVal:{}, hintRef:null, hintVal:{} };
+const SOLO = { bids:{}, hints:{}, rise:{} };   // ひとり練習：自分の入力
+let my = { bid:0, lot:-1, key:'', sent:false, hint:0, hintKey:'', rise:null };
+const me = () => solo ? 'solo-me' : uid;
+const H = () => seatsOf(G).length;
+const myIdx = () => G ? seatsOf(G).findIndex(s=>s && s[0]===me()) : -1;
+const roundKey = () => G ? `g${G.gid}r${G.round}` : '';
+const purseOf = i => arr(G.purse)[i];
+const rankOf = i => 1 + arr(G.purse).filter(p=>p>purseOf(i)).length;
+const roomRef = p => db.ref(`${ROOT}/${code}${p?'/'+p:''}`);
+const projector = () => !solo && myIdx()<0;          // ホスト（参加しない）や観戦者は大きな画面
+const typeOfSeat = i => i<H() ? '' : TYPES[CPU_CH[(G.cpu||'')[i-H()]]||'calc'].label;
+
+/* ================= 効果音（WebAudio で合成） ================= */
+const SFX = (()=>{
+  let ctx=null, muted = ls.get('ev-auction-mute')==='1';
+  const ac = ()=>{ if(!ctx){ try{ ctx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } if(ctx && ctx.state==='suspended') ctx.resume().catch(()=>{}); return ctx; };
+  const tone = (f, t0, dur, type='sine', vol=.18, f2) => { const c=ac(); if(!c||muted) return; const o=c.createOscillator(), g=c.createGain(); o.type=type; o.frequency.setValueAtTime(f, c.currentTime+t0); if(f2) o.frequency.exponentialRampToValueAtTime(f2, c.currentTime+t0+dur); g.gain.setValueAtTime(vol, c.currentTime+t0); g.gain.exponentialRampToValueAtTime(.001, c.currentTime+t0+dur); o.connect(g).connect(c.destination); o.start(c.currentTime+t0); o.stop(c.currentTime+t0+dur+.05); };
+  const noise = (t0, dur, vol=.25, hp=800) => { const c=ac(); if(!c||muted) return; const n=c.createBuffer(1, c.sampleRate*dur, c.sampleRate), d=n.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*(1-i/d.length); const s=c.createBufferSource(), f=c.createBiquadFilter(), g=c.createGain(); f.type='highpass'; f.frequency.value=hp; g.gain.value=vol; s.buffer=n; s.connect(f).connect(g).connect(c.destination); s.start(c.currentTime+t0); };
+  return {
+    unlock: ac, get muted(){ return muted; }, toggle(){ muted=!muted; ls.set('ev-auction-mute', muted?'1':'0'); },
+    tick(){ tone(1100, 0, .05, 'square', .06); },
+    count(){ tone(660, 0, .12, 'triangle', .2); },
+    hammer(){ tone(160, 0, .25, 'sine', .5, 60); noise(0, .08, .4, 1500); tone(1800, .01, .06, 'square', .08); },
+    roll(){ for(let i=0;i<6;i++) noise(i*.07, .05, .12, 2500); },
+    settle(){ tone(520, 0, .1, 'triangle', .2); },
+    win(){ [523,659,784,1047].forEach((f,i)=>tone(f, i*.09, .22, 'triangle', .2)); },
+    jackpot(){ [523,659,784,1047,1319,1568].forEach((f,i)=>tone(f, i*.07, .3, 'square', .12)); noise(.5, .6, .15, 4000); },
+    lose(){ [392,330,262].forEach((f,i)=>tone(f, i*.14, .25, 'sawtooth', .1)); },
+    coin(){ tone(1319, 0, .08, 'square', .1); tone(1760, .08, .15, 'square', .1); },
+    up(){ tone(880, 0, .05, 'triangle', .08); },
+  };
+})();
+document.addEventListener('pointerdown', ()=>SFX.unlock(), {passive:true});
+
+/* ================= 花吹雪・帯 ================= */
+function confetti(n=80){
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const box = document.createElement('div'); box.className='confetti'; document.body.appendChild(box);
+  const cols = ['#d6a957','#7ed6a0','#8fd3ff','#ff9a8a','#f4ece0'];
+  for(let i=0;i<n;i++){ const s=document.createElement('i'); s.style.left=Math.random()*100+'%'; s.style.background=pick(cols); s.style.animationDelay=Math.random()*.6+'s'; s.style.animationDuration=(1.6+Math.random()*1.4)+'s'; s.style.transform=`rotate(${rint(0,360)}deg)`; box.appendChild(s); }
+  setTimeout(()=>box.remove(), 3600);
+}
+function band(text, sub, color){
+  const b = document.createElement('div'); b.className='band'; b.style.setProperty('--bc', color||'var(--brass)');
+  b.innerHTML = `<b>${esc(text)}</b>${sub?`<span>${esc(sub)}</span>`:''}`; document.body.appendChild(b); setTimeout(()=>b.remove(), 2000);
+}
+
+/* ================= Firebase 接続 ================= */
+function initFirebase(){
+  if(!window.firebase){ fbError = 'オンライン機能を読み込めませんでした（通信が制限されている可能性があります）'; return; }
+  try{
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.database();
+    db.ref('.info/serverTimeOffset').on('value', s=>{ offset = s.val()||0; });
+    firebase.auth().onAuthStateChanged(u=>{ if(u){ uid = u.uid; fbError=''; if(screen==='home') render(); } });
+    firebase.auth().signInAnonymously().catch(e=>{ fbError = 'サーバーにログインできませんでした（' + (e.code||'error') + '）'; if(screen==='home') render(); });
+  }catch(e){ fbError = 'オンライン機能の初期化に失敗しました'; }
+}
+
+/* ================= 部屋 ================= */
+async function createRoom(){
+  homeErr='';
+  for(let tries=0; tries<12; tries++){
+    const c = String(rint(1000,9999));
+    let res;
+    try{ res = await db.ref(`${ROOT}/${c}/meta`).transaction(cur=>{ if(cur && cur.host!==uid && cur.createdAt > now()-ROOM_TTL) return; return {host:uid, createdAt:firebase.database.ServerValue.TIMESTAMP}; }); }
+    catch(e){ homeErr='部屋を作れませんでした（'+(e.code||e.message)+'）'; render(); return; }
+    if(res.committed){
+      code = c;
+      await Promise.all(['players','state','bids','hint','rise'].map(p=>roomRef(p).remove().catch(()=>{})));
+      ls.set('ev-auction-room', code);
+      enterRoom(true); return;
+    }
+  }
+  homeErr='空いている部屋コードが見つかりませんでした。もう一度試してください'; render();
+}
+async function joinRoom(c){
+  homeErr='';
+  if(!/^\d{4}$/.test(c)){ homeErr='4桁の数字を入れてください'; render(); return; }
+  let snap;
+  try{ snap = await db.ref(`${ROOT}/${c}/meta`).get(); }
+  catch(e){ homeErr='接続できませんでした（'+(e.code||e.message)+'）'; render(); return; }
+  const m = snap.val();
+  if(!m || m.createdAt < now()-ROOM_TTL){ homeErr='その部屋は見つかりません'; render(); return; }
+  code = c; ls.set('ev-auction-room', code);
+  enterRoom(m.host===uid);
+}
+function enterRoom(host){
+  isHost = host; solo = false; screen = 'lobby'; G = null; players = {};
+  if(!isHost || hostPlays) announce();
+  unsub.forEach(u=>u()); unsub = [];
+  const listen = (ref, fn)=>{ ref.on('value', fn, ()=>{}); unsub.push(()=>ref.off('value', fn)); };
+  listen(roomRef('meta'), s=>{ meta = s.val(); });
+  listen(roomRef('players'), s=>{ players = s.val()||{}; if(screen==='lobby') refreshLobby(); });
+  listen(roomRef('state'), s=>onState(s.val()));
+  const conn = db.ref('.info/connected');
+  const onConn = s=>{ if(s.val() && code && (!isHost || hostPlays)) announce(); };
+  conn.on('value', onConn); unsub.push(()=>conn.off('value', onConn));
+  render();
+}
+function announce(){
+  const ref = roomRef('players/'+uid);
+  ref.set({name: nick||'なまえなし', joinedAt: firebase.database.ServerValue.TIMESTAMP}).catch(()=>{});
+  ref.onDisconnect().remove();
+}
+function leaveRoom(){
+  if(db && code && uid){ const ref = roomRef('players/'+uid); ref.onDisconnect().cancel(); ref.remove().catch(()=>{}); }
+  unsub.forEach(u=>u()); unsub=[]; stopWatch();
+  code=''; G=null; isHost=false; solo=false; screen='home'; render(); window.scrollTo(0,0);
+}
+
+/* ================= 状態の反映 ================= */
+let lastShown = '';
+function onState(s){
+  const prev = G;
+  if(!s || s.phase==='lobby'){
+    G = null; stopWatch();
+    if(screen!=='lobby'){ screen='lobby'; render(); window.scrollTo(0,0); } else refreshLobby();
+    return;
+  }
+  G = s;
+  const changed = screen!=='game' || !prev || prev.phase!==G.phase || prev.round!==G.round || prev.gid!==G.gid;
+  if(!prev || prev.round!==G.round || prev.gid!==G.gid) resetMine();
+  if(isHost) syncWatch();
+  screen='game';
+  if(changed){ if(G.phase==='bid' && !solo) restoreMine(); render(); window.scrollTo(0,0); }
+  else patchLive();
+}
+function resetMine(){ my = { bid:0, lot: G && roundLots(G, G.round).length>1 ? -1 : 0, key:roundKey(), sent:false, hint:0, hintKey:roundKey(), rise:null }; }
+function restoreMine(){
+  const k = roundKey(), i = myIdx(); if(i<0) return;
+  roomRef(`bids/${k}/${uid}`).get().then(s=>{ const v=s.val(); if(v && roundKey()===k){ my.sent=true; my.bid=v.b; my.lot=v.l; render(); } }).catch(()=>{});
+  roomRef(`hint/${k}/${uid}`).get().then(s=>{ const v=s.val(); if(v && roundKey()===k){ my.hint=v; render(); } }).catch(()=>{});
+}
+
+/* ================= ホストの進行（ひとり練習も同じ） ================= */
+function commit(next){
+  if(solo){ const prev=G; G=next; screen='game'; if(!prev || prev.phase!==G.phase || prev.round!==G.round || prev.gid!==G.gid){ if(!prev || prev.round!==G.round || prev.gid!==G.gid) resetMine(); render(); window.scrollTo(0,0); } else patchLive(); return; }
+  roomRef('state').set(next).catch(e=>console.error(e));
+}
+function startGame(){
+  let list;
+  if(solo) list = [['solo-me', nick||'あなた', -1]];
+  else{
+    list = Object.entries(players||{}).filter(([k,p])=>p && typeof p.name==='string').sort((a,b)=>(a[1].joinedAt||0)-(b[1].joinedAt||0)).map(([k,p])=>[k, p.name.slice(0,8), -1]);
+    if(!hostPlays) list = list.filter(s=>s[0]!==uid);
+    list = list.slice(0, MAX_N);
+    if(!list.length) return;
+  }
+  const teams = solo ? 0 : HOST.teams;
+  if(teams) list.forEach((s,i)=>{ s[2] = i % teams; });
+  const n = Math.max(HOST.target, list.length), mode = HOST.mode;
+  const plan = makePlan(mode);
+  const cpu = Array.from({length:n-list.length}, ()=>({calc:'c',bold:'b',safe:'s',rand:'r'})[pickType()]).join('');
+  HOST.closing = false;
+  if(!solo) ['bids','hint','rise'].forEach(p=>roomRef(p).remove().catch(()=>{}));
+  SOLO.bids={}; SOLO.hints={}; SOLO.rise={};
+  const base = {gid:Date.now(), mode, n, seats:list, cpu, teams, limit:HOST.limit, purse:new Array(n).fill(START), lots:plan.lots, round:0, hist:[], last:null};
+  commit(phaseStart(base, 0));
+}
+/* ラウンドの始まり：紙入札は bid、せり上げ式は rise */
+function phaseStart(base, r){
+  const Gx = Object.assign({}, base, {round:r, last:null, picked:0});
+  if(Gx.mode==='rising'){
+    const lot = roundLots(Gx, r)[0];
+    const step = Math.max(5, Math.round(Math.max(lot.ev, 20)/12/5)*5);
+    const startP = Math.max(0, Math.floor(Math.max(lot.ev,0)*0.3/step)*step);
+    const purse = arr(Gx.purse);
+    const seatsN = arr(Gx.seats).length;
+    const cmax = [];
+    for(let i=seatsN;i<Gx.n;i++){ const t = CPU_CH[(Gx.cpu||'')[i-seatsN]]||'calc'; const v = cpuValue(t, lot); cmax.push(purse[i]>0 && Math.random()>.08 ? Math.max(0, Math.min(purse[i], Math.round(v))) : -1); }
+    return Object.assign(Gx, {phase:'rise', riseAt: now()+ENTRY_MS, step, base:startP, cmax, alive:0, price:startP});
+  }
+  return Object.assign(Gx, {phase:'bid', endsAt: now()+Gx.limit*1000});
+}
+const priceAt = (Gx, t) => Gx.base + Math.max(0, Math.floor((t - Gx.riseAt)/RISE_TICK))*Gx.step;
+
+/* ---- 見張り：提出数・ヒント・せり上げの参加と降り ---- */
+function syncWatch(){
+  if(solo || !G){ return; }
+  const k = roundKey();
+  if(G.phase==='bid'){
+    if(!(HOST.subRef && HOST.subRef._k===k)){
+      stopRef('subRef'); const ref = roomRef(`bids/${k}`); ref._k=k; HOST.subCount=0;
+      ref._fn = s=>{ const v=s.val()||{}; const c=seatsOf(G).filter(x=>x[0] in v).length; HOST.subCount=c; if(G && G.phase==='bid' && c!==G.picked) roomRef('state/picked').set(c).catch(()=>{}); };
+      ref.on('value', ref._fn, ()=>{}); HOST.subRef = ref;
+    }
+  } else stopRef('subRef');
+  if(G.phase==='rise'){
+    if(!(HOST.riseRef && HOST.riseRef._k===k)){
+      stopRef('riseRef'); const ref = roomRef(`rise/${k}`); ref._k=k; HOST.riseVal={};
+      ref._fn = s=>{ HOST.riseVal = s.val()||{}; }; ref.on('value', ref._fn, ()=>{}); HOST.riseRef = ref;
+    }
+  } else stopRef('riseRef');
+  if(G.phase==='bid' || G.phase==='rise'){
+    if(!(HOST.hintRef && HOST.hintRef._k===k)){
+      stopRef('hintRef'); const ref = roomRef(`hint/${k}`); ref._k=k; HOST.hintVal={};
+      ref._fn = s=>{ HOST.hintVal = s.val()||{}; }; ref.on('value', ref._fn, ()=>{}); HOST.hintRef = ref;
+    }
+  }
+}
+function stopRef(name){ const r=HOST[name]; if(r){ r.off('value', r._fn); HOST[name]=null; } }
+function stopWatch(){ ['subRef','riseRef','hintRef'].forEach(stopRef); }
+
+async function hostTick(){
+  if(!G || HOST.closing) return;
+  if(!solo && !isHost) return;
+  if(G.phase==='bid'){
+    const all = solo ? !!SOLO.bids[roundKey()] : HOST.subCount>=H();
+    if(all || (G.endsAt && now()>=G.endsAt)){
+      HOST.closing = true;
+      let bids = {};
+      if(solo) bids = SOLO.bids[roundKey()] ? {'solo-me':SOLO.bids[roundKey()]} : {};
+      else { try{ bids = (await roomRef(`bids/${roundKey()}`).get()).val()||{}; }catch(e){} }
+      closeSealed(bids, solo ? {'solo-me':SOLO.hints[roundKey()]||0} : HOST.hintVal);
+    }
+  } else if(G.phase==='rise'){
+    const t = now(); if(t < G.riseAt) return;
+    const p = priceAt(G, t), rv = solo ? SOLO.rise[roundKey()]||{} : HOST.riseVal;
+    const purse = arr(G.purse), st = seatsOf(G);
+    const humanIn = st.map((s,i)=>{ const v = (solo ? rv[s[0]] : rv[s[0]]); return v && v.in && v.out==null && purse[i]>=p ? i : -1; }).filter(i=>i>=0);
+    const cmax = arr(G.cmax), cpuIn = cmax.map((m,j)=>m>=p ? st.length+j : -1).filter(i=>i>=0);
+    const alive = humanIn.length + cpuIn.length;
+    const k = kOf(G.n, 1);
+    if(alive<=k){
+      HOST.closing = true;
+      closeRising(humanIn.concat(cpuIn), p, rv, solo ? {'solo-me':SOLO.hints[roundKey()]||0} : HOST.hintVal);
+    } else if(p!==G.price || alive!==G.alive){
+      if(solo){ G = Object.assign({}, G, {price:p, alive}); patchLive(); }
+      else roomRef('state').update({price:p, alive}).catch(()=>{});
+    }
+  }
+}
+function hintsArr(hv){ const st=seatsOf(G); return Array.from({length:G.n}, (_,i)=> i<st.length ? Math.min(2, +(hv||{})[st[i][0]]||0) : 0); }
+function closeSealed(bmap, hv){
+  const st = seatsOf(G), lots = roundLots(G, G.round), purse = arr(G.purse), seatsN = st.length;
+  const bids = [];
+  for(let i=0;i<G.n;i++){
+    if(i<seatsN){ const v = bmap[st[i][0]]; const b = v && typeof v.b==='number' ? Math.max(0, Math.min(Math.max(0,purse[i]), Math.round(v.b))) : 0; const l = v && v.l>=0 && v.l<lots.length ? v.l : (lots.length===1?0:-1); bids.push({b: l>=0?b:0, l: b>0?l:-1, at: v && v.at || 9e15}); }
+    else { const t = CPU_CH[(G.cpu||'')[i-seatsN]]||'calc'; const c = cpuBid(t, lots, purse[i]); bids.push({b:c.b, l:c.l, at: now()+Math.random()*G.limit*1000}); }
+  }
+  const next = settleSealed(G, bids, hintsArr(hv));
+  commit(Object.assign(next, {phase:'show', showAt: now()}));
+  setTimeout(()=>{ HOST.closing=false; }, 1200);
+}
+function closeRising(winners, p, rv, hv){
+  const st = seatsOf(G), lots = roundLots(G, G.round), n = G.n, cmax = arr(G.cmax);
+  const price = new Array(n).fill(0), lsel = new Array(n).fill(-1);
+  st.forEach((s,i)=>{ const v = rv[s[0]]; if(v && v.in){ lsel[i]=0; price[i] = v.out!=null ? v.out : p; } });
+  cmax.forEach((m,j)=>{ const i = st.length+j; if(m>=0){ lsel[i]=0; price[i] = Math.min(m, p); } });
+  winners.forEach(i=>{ price[i]=p; lsel[i]=0; });
+  const res = [lots[0].draw()];
+  const next = finishRound(G, lots, res, [winners], price, lsel, hintsArr(hv), [p], arr(G.purse).slice(), kOf(n,1));
+  commit(Object.assign(next, {phase:'show', showAt: now(), price:p}));
+  setTimeout(()=>{ HOST.closing=false; }, 1200);
+}
+function nextRound(){
+  if(G.round+1>=ROUNDS) commit(Object.assign({}, G, {phase:'final'}));
+  else commit(phaseStart(G, G.round+1));
+}
+function backToLobby(){
+  if(solo){ G=null; screen='solo'; render(); return; }
+  ['bids','hint','rise'].forEach(p=>roomRef(p).remove().catch(()=>{}));
+  commit({phase:'lobby'});
+}
+
+/* ================= 挑戦者の操作 ================= */
+function buyHint(level){
+  const i = myIdx(); if(i<0 || my.hint>=level) return;
+  const cost = HINT_COST[level]-HINT_COST[my.hint];
+  if(purseOf(i) - HINT_COST[my.hint] < cost){ return; }
+  my.hint = level; SFX.coin();
+  if(solo) SOLO.hints[roundKey()] = level; else roomRef(`hint/${roundKey()}/${uid}`).set(level).catch(()=>{});
+  render();
+}
+function sendBid(){
+  const k = roundKey(), lots = roundLots(G, G.round);
+  const l = lots.length>1 ? my.lot : 0;
+  const b = l<0 ? 0 : my.bid;
+  my.sent = true; SFX.hammer();
+  if(solo){ SOLO.bids[k] = {b, l, at:Date.now()}; render(); setTimeout(hostTick, 300); return; }
+  roomRef(`bids/${k}/${uid}`).set({b, l, at:firebase.database.ServerValue.TIMESTAMP}).then(()=>render()).catch(()=>{ my.sent=false; render(); });
+}
+function riseAct(kind){
+  const k = roundKey(), p = priceAt(G, now());
+  if(kind==='in'){ my.rise = {in:1}; SFX.coin(); }
+  else { if(!my.rise || my.rise.out!=null) return; my.rise = {in:1, out: p}; SFX.lose(); }
+  if(solo){ SOLO.rise[k] = SOLO.rise[k]||{}; SOLO.rise[k]['solo-me'] = my.rise; render(); return; }
+  roomRef(`rise/${k}/${uid}`).set(my.rise).catch(()=>{});
+  render();
+}
+/* ================= 画面の部品 ================= */
+function faceHtml(f, cls){
+  if(f.t==='die'){
+    const P={1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]}[f.v]||[4];
+    return `<div class="die ${f.v===1?'red':''} ${cls||''}">${[0,1,2,3,4,5,6,7,8].map(i=>`<i class="${P.includes(i)?'on':''} ${i===4?'c':''}"></i>`).join('')}</div>`;
+  }
+  if(f.t==='coin') return `<div class="coin ${f.h?'h':'t'} ${cls||''}">${f.h?'表':'裏'}</div>`;
+  if(f.t==='ball') return `<div class="ball ${f.c} ${cls||''}">${({r:'赤',w:'白',k:'黒'})[f.c]||'？'}</div>`;
+  if(f.t==='card') return `<div class="card ${f.back?'back':''} ${f.red?'redsuit':''} ${cls||''}">${esc(f.v||'')}</div>`;
+  return '';
+}
+function randomFace(f){
+  if(f.t==='die') return {t:'die', v:rint(1,6)};
+  if(f.t==='coin') return {t:'coin', h:Math.random()<.5};
+  if(f.t==='ball') return {t:'ball', c:'q'};
+  if(f.t==='card') return {t:'card', back:true};
+  return f;
+}
+const lotLetter = (lots, li) => lots.length>1 ? `くじ${'AB'[li]}` : 'くじ';
+function lotTags(lot){
+  return `${lot.tag==='jackpot'?'<span class="ltag jp">🎰 ジャックポット</span>':''}${lot.tag==='minus'?'<span class="ltag mi">💣 マイナスあり</span>':''}${lot.mult>1?'<span class="ltag x2">×2 最終ラウンド</span>':''}`;
+}
+function lotCard(lot, li, lots, opt){
+  opt = opt||{};
+  const sel = opt.selectable, on = opt.on;
+  return `<${sel?'button':'section'} class="lot pop ${sel?'sel':''} ${on?'on':''} ${lot.tag||''}" ${sel?`data-lot="${li}" aria-pressed="${!!on}"`:''}>
+    <span class="no">${lots.length>1?`LOT ${'AB'[li]}`:`LOT No.${G.round+1}`}</span><span class="kind" aria-hidden="true">${lot.icon}</span>
+    <div class="tags">${lotTags(lot)}</div>
+    <p class="how">${lot.how}</p>
+    <div class="prize"><span>賞金</span><b>${lot.prize}</b></div>
+    ${sel?`<span class="pickme">${on?'✓ このくじに入札':'タップして選ぶ'}</span>`:''}
+  </${sel?'button':'section'}>`;
+}
+function roundBadge(){
+  const lots = roundLots(G, G.round);
+  const b = [];
+  if(lots.length>1) b.push('<span class="rb dbl">🔀 2択ラウンド：どちらか1つに入札</span>');
+  if(G.round===ROUNDS-1) b.push('<span class="rb fin">🔥 最終ラウンド：賞金2倍</span>');
+  if(G.mode==='rising') b.push('<span class="rb rise">📈 せり上げ式</span>');
+  return b.length ? `<div class="rbs">${b.join('')}</div>` : '';
+}
+function topbar(){
+  const i = myIdx();
+  const t = i>=0 && G.teams ? seatsOf(G)[i][2] : -1;
+  const codeChip = solo ? '' : `<span class="chip">ROOM <b class="num">${esc(code)}</b></span>`;
+  return `<div class="row topbar"><span class="eyebrow num">ROUND ${G.round+1} / ${ROUNDS}</span>
+    <span class="chips">${codeChip}${t>=0?`<span class="chip" style="border-color:${TEAM_INFO[t].color};color:${TEAM_INFO[t].color}">${TEAM_INFO[t].name}</span>`:''}${i>=0?`<span class="chip me num">持ち点 ${purseOf(i)} ・ ${rankOf(i)}位 / ${G.n}人</span>`:`<span class="chip">${isHost?'ホスト（進行）':'観戦中'}</span>`}
+    <button class="mute" id="muteBtn" aria-label="音">${SFX.muted?'🔇':'🔊'}</button></span></div>`;
+}
+function bindMute(){ const m=document.getElementById('muteBtn'); if(m) m.onclick=()=>{ SFX.toggle(); m.textContent=SFX.muted?'🔇':'🔊'; }; }
+function hintBox(lots, interactive){
+  const h = my.hint;
+  const lines = lots.map((lot, li)=>{
+    if(h===0) return '';
+    const L = h>=2 ? lot.calc : lot.calc.slice(0,-1);
+    return `<div class="hint-lot">${lots.length>1?`<b>${lotLetter(lots,li)}</b>`:''}${L.map((c,j)=>`<div class="${h>=2&&j===L.length-1?'hl':''}">${esc(c)}</div>`).join('')}${h===1?'<div class="dim">（期待値は自分で計算しよう）</div>':''}</div>`;
+  }).join('');
+  const i = myIdx(), money = i>=0 ? purseOf(i) - HINT_COST[h] : 0;
+  return `<section class="panel hintbox">
+    <div class="row"><span class="eyebrow">💡 情報を買う</span><span class="dim" style="font-size:.78rem">買った分は持ち点から引かれます</span></div>
+    ${interactive ? `<div class="hintbtns">
+      <button class="ghost" id="hint1" ${h>=1||money<HINT_COST[1]?'disabled':''}>${h>=1?'✓ ':''}確率まで（${HINT_COST[1]}点）</button>
+      <button class="ghost" id="hint2" ${h>=2||money<HINT_COST[2]-HINT_COST[h]?'disabled':''}>${h>=2?'✓ ':''}期待値まで（${h>=1?`あと${HINT_COST[2]-HINT_COST[1]}`:HINT_COST[2]}点）</button>
+    </div>` : ''}
+    ${lines ? `<div class="calc">${lines}</div>` : (interactive ? '<p class="dim" style="font-size:.82rem">計算に自信があれば買わなくてOK。買うとこのくじの確率や期待値が見られます。</p>' : '')}
+  </section>`;
+}
+function bindHints(){ const a=document.getElementById('hint1'), b=document.getElementById('hint2'); if(a) a.onclick=()=>buyHint(1); if(b) b.onclick=()=>buyHint(2); }
+function gauge(endsAt, total){ return `<div class="gauge" id="gauge" role="timer" aria-label="残り時間" data-end="${endsAt}" data-total="${total}"><div class="bar" id="gaugeBar"></div><span class="left num" id="gaugeTxt"></span></div>`; }
+const cols = (a,b) => `<div class="cols"><div class="col">${a}</div><div class="col">${b}</div></div>`;
+function hostNext(label){
+  if(solo || isHost) return `<button class="btn" id="nextBtn">${label}</button>`;
+  return `<p class="status">ホストの進行を待っています…</p>`;
+}
+
+/* ================= 画面 ================= */
+function render(){
+  document.body.classList.toggle('big', screen==='game' && !!G && projector());
+  ({home:renderHome, solo:renderSolo, lobby:renderLobby, game:renderGame})[screen]();
+  bindMute();
+}
+const logo = small => `<header class="title ${small?'sm':''}"><span class="eyebrow">EXPECTED VALUE AUCTION</span><h1>期待値オークション</h1><div class="rule"></div>${small?'':'<span class="dim" style="font-size:.85rem">くじの「本当の値打ち」を見ぬいて競り落とせ</span>'}</header>`;
+function rulesPanel(){
+  return `<section class="panel">
+    <span class="eyebrow">ルール</span>
+    <ul class="rules">
+      <li>全員 <b>${START}点</b> からスタート。全${ROUNDS}ラウンド、最後の持ち点で順位が決まる。</li>
+      <li><b>紙入札</b>：全員がこっそり入札額を出す（0なら見送り）。高い順に参加者の<b>2割</b>が落札し、自分の入札額を払う。</li>
+      <li><b>せり上げ式</b>：値段がだんだん上がる。「降りる」を押した人から脱落し、残りが2割以下になった瞬間の値段で落札。</li>
+      <li>くじは全員の前で1回だけ引く。落札者全員がその賞金を受け取る。</li>
+      <li>🎰 <b>ジャックポット</b>：めったに当たらないが当たれば大きい。💣 <b>マイナスくじ</b>：点数が減ることもある。</li>
+      <li>🔀 <b>2択ラウンド</b>：くじが2つ。どちらか片方に入札（それぞれ1割が落札）。🔥 <b>最終ラウンド</b>は賞金2倍。</li>
+      <li>💡 持ち点で<b>ヒント</b>（確率・期待値）を買える。くじの<b>期待値</b>より安く買えれば得！</li>
+    </ul>
+  </section>`;
+}
+function renderHome(){
+  const ok = !!(db && uid), last = ls.get('ev-auction-room');
+  app.innerHTML = cols(`${logo(false)}${rulesPanel()}`, `
+  <section class="panel">
+    <label for="nickInput" class="eyebrow">プレイヤー名（8文字まで）</label>
+    <input type="text" id="nickInput" maxlength="8" value="${esc(nick)}" placeholder="なまえ" autocomplete="nickname">
+  </section>
+  <section class="panel">
+    <span class="eyebrow">オンラインで参加する</span>
+    <label for="codeInput" class="dim" style="font-size:.85rem">ホストに言われた部屋コード（4桁）</label>
+    <div class="join-row">
+      <input type="text" id="codeInput" inputmode="numeric" maxlength="4" pattern="[0-9]*" value="${esc(last)}" placeholder="0000" autocomplete="off">
+      <button class="btn" id="joinBtn" ${ok?'':'disabled'}>参加</button>
+    </div>
+    <p class="err" id="homeErr" role="alert">${esc(homeErr)}</p>
+  </section>
+  <button class="btn" id="createBtn" ${ok?'':'disabled'}>部屋を作る（ホスト）</button>
+  <button class="ghost" id="soloBtn">ひとりで練習（自分以外はCPU）</button>
+  ${ok?'':`<p class="dim" style="font-size:.85rem;text-align:center">${esc(fbError || 'サーバーに接続しています…')}</p>`}`);
+  const ni = document.getElementById('nickInput');
+  ni.oninput = ()=>{ nick = ni.value.trim().slice(0,8); ls.set('ev-auction-nick', nick); };
+  const needName = ()=>{ if(nick) return false; ni.focus(); document.getElementById('homeErr').textContent='先にプレイヤー名を入れてください'; return true; };
+  const ci = document.getElementById('codeInput');
+  ci.oninput = ()=>{ ci.value = ci.value.replace(/\D/g,'').slice(0,4); };
+  const jb = document.getElementById('joinBtn');
+  jb.onclick = ()=>{ if(needName()) return; jb.disabled=true; joinRoom(ci.value); };
+  ci.onkeydown = e=>{ if(e.key==='Enter' && !jb.disabled) jb.click(); };
+  const cb = document.getElementById('createBtn');
+  cb.onclick = ()=>{ if(needName()) return; cb.disabled=true; createRoom(); };
+  document.getElementById('soloBtn').onclick = ()=>{ solo=true; isHost=true; HOST.teams=0; screen='solo'; render(); };
+}
+function settingsHtml(online){
+  const k = kOf(HOST.target, 1);
+  return `<div class="row"><label for="nRange" class="eyebrow">CPUを含めた人数</label><span class="val" id="nOut">${HOST.target}人</span></div>
+    <input type="range" id="nRange" min="${MIN_N}" max="${MAX_N}" step="1" value="${HOST.target}">
+    <p class="dim" style="font-size:.82rem" id="kOut">毎ラウンド ${k}人が落札（2択ラウンドはそれぞれ ${kOf(HOST.target,2)}人）${online?'。参加者が多ければ人数は自動で増えます':''}</p>
+    <span class="eyebrow">オークションの方式</span>
+    <div class="seg" id="segM">${[['sealed','📝 紙入札'],['rising','📈 せり上げ式']].map(([v,l])=>`<button aria-pressed="${HOST.mode===v}" data-v="${v}">${l}</button>`).join('')}</div>
+    <p class="dim" style="font-size:.8rem">${HOST.mode==='sealed'?'こっそり入札額を書いて一斉に公開。2択ラウンドあり。':'値段がだんだん上がり、降りた人から脱落。最後まで残った2割が落札（2択ラウンドなし）。'}</p>
+    ${HOST.mode==='sealed'?`<span class="eyebrow">1回の入札の制限時間</span>
+    <div class="seg" id="segT">${[30,45,60,90].map(t=>`<button aria-pressed="${HOST.limit===t}" data-t="${t}">${t}秒</button>`).join('')}</div>`:''}
+    ${online?`<span class="eyebrow">班対抗（参加した順に自動で分けます）</span>
+    <div class="seg" id="segTeam">${[[0,'なし'],[2,'2チーム'],[3,'3チーム'],[4,'4チーム']].map(([v,l])=>`<button aria-pressed="${HOST.teams===v}" data-v="${v}">${l}</button>`).join('')}</div>`:''}`;
+}
+function bindSettings(){
+  const nr=document.getElementById('nRange'), no=document.getElementById('nOut'), ko=document.getElementById('kOut');
+  if(nr) nr.oninput=()=>{ HOST.target=+nr.value; no.textContent=HOST.target+'人'; ko.textContent=`毎ラウンド ${kOf(HOST.target,1)}人が落札（2択ラウンドはそれぞれ ${kOf(HOST.target,2)}人）`; };
+  document.querySelectorAll('#segT button').forEach(b=>b.onclick=()=>{ HOST.limit=+b.dataset.t; render(); });
+  document.querySelectorAll('#segM button').forEach(b=>b.onclick=()=>{ HOST.mode=b.dataset.v; render(); });
+  document.querySelectorAll('#segTeam button').forEach(b=>b.onclick=()=>{ HOST.teams=+b.dataset.v; render(); });
+}
+function renderSolo(){
+  app.innerHTML = cols(`${logo(true)}${rulesPanel()}`, `<section class="panel"><span class="eyebrow">ひとりで練習</span>${settingsHtml(false)}</section>
+  <button class="btn" id="startBtn">オークション開始</button><button class="ghost" id="backBtn">もどる</button>`);
+  bindSettings();
+  document.getElementById('startBtn').onclick = startGame;
+  document.getElementById('backBtn').onclick = ()=>{ solo=false; isHost=false; screen='home'; render(); };
+}
+const lobbyList = () => Object.entries(players||{}).filter(([k,p])=>p && typeof p.name==='string').sort((a,b)=>(a[1].joinedAt||0)-(b[1].joinedAt||0));
+function lobbyListHtml(){
+  const l = lobbyList().filter(([k])=>hostPlays || k!==(meta&&meta.host));
+  return l.length ? l.map(([k,p],i)=>`<li class="${k===uid?'me':''}" ${HOST.teams&&isHost?`style="border-left:4px solid ${TEAM_INFO[i%HOST.teams].color}"`:''}>${esc(p.name.slice(0,8))}${k===uid?'（あなた）':''}</li>`).join('') : '<li class="dim">まだ誰もいません</li>';
+}
+function renderLobby(){
+  app.innerHTML = cols(`${logo(true)}
+  <section class="panel center">
+    <span class="eyebrow">ROOM CODE</span>
+    <p class="code num">${esc(code)}</p>
+    <p class="dim" style="font-size:.85rem">${isHost?'挑戦者はこのページを開いて、このコードで参加します':'ホストが開始するのを待っています…'}</p>
+  </section>
+  <section class="panel">
+    <div class="row"><span class="eyebrow">PLAYERS</span><span class="num dim" id="lobbyCount">${lobbyList().length}人</span></div>
+    <ul class="players" id="lobbyList">${lobbyListHtml()}</ul>
+  </section>`, isHost ? `<section class="panel">
+      <span class="eyebrow">ホストの設定</span>
+      <label class="check"><input type="checkbox" id="playChk" ${hostPlays?'checked':''}> ホストも参加者として遊ぶ（オフにすると進行役・プロジェクター用の大きな画面）</label>
+      ${settingsHtml(true)}
+    </section>
+    <button class="btn" id="startBtn">このメンバーで開始</button>
+    <button class="ghost" id="backBtn">部屋を出る</button>` : `${rulesPanel()}<button class="ghost" id="backBtn">部屋を出る</button>`);
+  if(isHost){
+    bindSettings();
+    const pc=document.getElementById('playChk');
+    pc.onchange=()=>{ hostPlays=pc.checked; if(hostPlays) announce(); else { const r=roomRef('players/'+uid); r.onDisconnect().cancel(); r.remove().catch(()=>{}); } };
+    document.getElementById('startBtn').onclick = ()=>{ if(!lobbyList().filter(([k])=>hostPlays||k!==uid).length) return; startGame(); };
+  }
+  document.getElementById('backBtn').onclick = leaveRoom;
+}
+function refreshLobby(){ const ul=document.getElementById('lobbyList'), c=document.getElementById('lobbyCount'); if(ul){ ul.innerHTML=lobbyListHtml(); c.textContent=lobbyList().length+'人'; } }
+
+function renderGame(){
+  if(!G){ app.innerHTML = `${logo(true)}<section class="panel"><p class="status">受信しています…</p></section>`; return; }
+  ({bid:renderBid, rise:renderRise, show:renderShow, final:renderFinal})[G.phase]();
+}
+
+/* ---------- 紙入札 ---------- */
+function renderBid(){
+  const lots = roundLots(G, G.round), i = myIdx(), k = kOf(G.n, lots.length);
+  const status = `<p class="status" id="pickedTxt">${solo?'':`${G.picked||0} / ${H()}人が入札`}${G.n>H()?`${solo?'':' ・ '}ほか${G.n-H()}席はCPU`:''}</p>`;
+  const lotsHtml = lots.map((lot,li)=>lotCard(lot, li, lots, {selectable: i>=0 && lots.length>1 && !my.sent, on: my.lot===li})).join('');
+  const info = `<p class="dim" style="font-size:.85rem">${lots.length>1?`くじごとに入札額の上位 <b>${k}人</b> が落札。`:`入札額の上位 <b>${k}人</b> が落札。`}期待値を計算して、いくらまでなら得かを考えよう。</p>`;
+  if(i<0){
+    app.innerHTML = cols(`${topbar()}${roundBadge()}<div class="lots ${lots.length>1?'two':''}">${lotsHtml}</div>`,
+      `${gauge(G.endsAt, G.limit*1000)}<section class="panel center"><span class="eyebrow">入札受付中</span><p class="bigcount num" id="bigCount">${G.picked||0}<small> / ${H()}</small></p>${status}</section>${info}`);
+    updGauge(); return;
+  }
+  const purse = purseOf(i), maxBid = Math.max(0, purse - HINT_COST[my.hint]);
+  my.bid = Math.min(my.bid, maxBid);
+  const needLot = lots.length>1 && my.lot<0;
+  app.innerHTML = cols(`${topbar()}${roundBadge()}<div class="lots ${lots.length>1?'two':''}">${lotsHtml}</div>${info}`,
+  `${gauge(G.endsAt, G.limit*1000)}
+  ${my.sent ? `<section class="panel center pop"><span class="eyebrow">入札しました</span>
+      <p class="bidnum num">${my.bid>0?my.bid:'見送り'}</p>${my.bid>0&&lots.length>1?`<p>${lotLetter(lots,my.lot)}に入札</p>`:''}
+      <p class="dim">ほかの人を待っています…</p>${status}</section>`
+  : `<section class="panel">
+    <div class="row"><label for="bidRange" class="eyebrow">あなたの入札額${lots.length>1&&my.lot>=0?`（${lotLetter(lots,my.lot)}）`:''}</label><span class="purse num dim">使える点 ${maxBid}</span></div>
+    <div class="bidnum num" id="bidNum" aria-live="polite">${my.bid}</div>
+    <input type="range" id="bidRange" min="0" max="${maxBid}" step="1" value="${my.bid}" ${maxBid<=0?'disabled':''}>
+    <div class="steps">${[-50,-10,-1,1,10,50].map(d=>`<button data-d="${d}">${d>0?'+':''}${d}</button>`).join('')}</div>
+    <p class="dim" style="font-size:.82rem">${maxBid<=0?'持ち点がないので、このラウンドは見送りです。':'0 のまま入札すると「見送り」になります。'}</p>
+  </section>
+  <button class="btn" id="bidBtn" ${needLot && my.bid>0?'disabled':''}>${needLot && my.bid>0?'先にくじA・Bを選んでください':my.bid>0?`${my.bid}点で入札する`:'見送る'}</button>
+  ${hintBox(lots, true)}`}
+  ${my.sent && my.hint ? hintBox(lots, false) : ''}`);
+  updGauge();
+  if(my.sent) return;
+  bindHints();
+  app.querySelectorAll('[data-lot]').forEach(b=>b.onclick=()=>{ my.lot=+b.dataset.lot; SFX.tick(); render(); });
+  const rg=document.getElementById('bidRange'), bn=document.getElementById('bidNum'), bb=document.getElementById('bidBtn');
+  const set=v=>{ my.bid=Math.max(0,Math.min(maxBid,Math.round(v))); rg.value=my.bid; bn.textContent=my.bid; const nl = lots.length>1 && my.lot<0 && my.bid>0; bb.disabled = nl; bb.textContent = nl ? '先にくじA・Bを選んでください' : my.bid>0?`${my.bid}点で入札する`:'見送る'; };
+  rg.oninput=()=>set(+rg.value);
+  app.querySelectorAll('.steps button').forEach(b=>b.onclick=()=>set(my.bid + +b.dataset.d));
+  bb.onclick=()=>{ if(now()>=G.endsAt) return; bb.disabled=true; sendBid(); };
+}
+
+/* ---------- せり上げ式 ---------- */
+function renderRise(){
+  const lots = roundLots(G, G.round), lot = lots[0], i = myIdx(), k = kOf(G.n, 1);
+  const t = now(), entry = t < G.riseAt, p = entry ? G.base : priceAt(G, t);
+  const st = my.rise;
+  const meter = `<section class="panel center risebox">
+      <span class="eyebrow">${entry?'参加受付中':'いまの値段'}</span>
+      <p class="price num" id="priceNow">${entry?Math.max(0,Math.ceil((G.riseAt-t)/1000)):p}<small>${entry?'秒後にスタート':'点'}</small></p>
+      <div class="evline"><span>スタート ${G.base}点</span><span>${RISE_TICK/1000}秒ごとに +${G.step}点</span></div>
+      <p class="alive" id="aliveTxt">${entry?`${G.n}人中、参加した人だけが競り合います`:`残り <b class="num">${G.alive||'−'}</b> 人（${k}人以下になったら落札）`}</p>
+    </section>`;
+  let pad = '';
+  if(i>=0){
+    const purse = purseOf(i) - HINT_COST[my.hint];
+    if(!st){ pad = entry ? `<button class="btn big-btn" id="inBtn" ${purse<=G.base?'disabled':''}>🙋 参加する！</button><p class="dim" style="font-size:.82rem;text-align:center">参加しないと、このくじは見送りになります</p>`
+                         : `<section class="panel center"><p>このくじは見送りました</p></section>`; }
+    else if(st.out==null) pad = `<section class="panel center"><span class="eyebrow">競り合い中</span><p class="dim">${entry?'スタートを待っています':'この値段で買ってもいい間は、そのまま待とう'}</p><p class="dim num" style="font-size:.85rem">使える点 ${purse}（これをこえたら自動で降ります）</p></section>
+      <button class="btn danger big-btn" id="outBtn" ${entry?'disabled':''}>✋ 降りる</button>`;
+    else pad = `<section class="panel center"><p><b class="num">${st.out}点</b> で降りました</p><p class="dim">結果を待っています…</p></section>`;
+  }
+  // プロジェクター：参加した人・降りた人
+  let crowd = '';
+  if(i<0 && isHost){
+    const rv = HOST.riseVal || {}, st = seatsOf(G);
+    const ins = st.filter(s=>rv[s[0]] && rv[s[0]].in);
+    const outs = ins.filter(s=>rv[s[0]].out!=null).sort((a,b)=>rv[b[0]].out-rv[a[0]].out);
+    const still = ins.filter(s=>rv[s[0]].out==null);
+    crowd = `<section class="panel"><span class="eyebrow">プレイヤー（参加 ${ins.length}人 / ${st.length}人）</span>
+      <div class="wnames">${still.map(s=>`<span>🙋 ${esc(s[1])}</span>`).join('')||'<span class="dim">まだだれも参加していません</span>'}</div>
+      ${outs.length?`<div class="wnames">${outs.map(s=>`<span class="out">✋ ${esc(s[1])} <i class="num">${rv[s[0]].out}</i></span>`).join('')}</div>`:''}
+      <p class="dim" style="font-size:.8rem">ほか ${G.n-st.length}席はCPU（それぞれ心の中で上限を決めています）</p></section>`;
+  }
+  app.innerHTML = cols(`${topbar()}${roundBadge()}<div class="lots">${lotCard(lot, 0, lots)}</div>
+    <p class="dim" style="font-size:.85rem">値段は少しずつ上がる。残りが <b>${k}人</b> 以下になった瞬間の値段で、残っている人が落札。</p>`,
+    `${meter}${pad}${crowd}${i>=0?hintBox(lots, true):''}`);
+  bindHints();
+  const ib=document.getElementById('inBtn'), ob=document.getElementById('outBtn');
+  if(ib) ib.onclick=()=>riseAct('in');
+  if(ob) ob.onclick=()=>riseAct('out');
+}
+
+/* ---------- 結果発表（カウントダウン → 落札者 → くじを引く → 結果） ---------- */
+let showSkip = '', showStage = '', rollTimer = null;
+function showPhaseOf(){
+  if(solo && showSkip===String(G.showAt)) return 'result';
+  const t = now() - G.showAt;
+  if(t < SHOW_COUNT) return 'count';
+  if(t < SHOW_DRAW) return 'reveal';
+  if(t < showEnd(G)) return 'draw';
+  return 'result';
+}
+function renderShow(){
+  const ph = showPhaseOf();
+  showStage = ph + G.showAt;
+  if(ph==='result'){ stopRoll(); return renderResult(); }
+  const lots = roundLots(G, G.round), L = G.last, i = myIdx();
+  const t = now() - G.showAt;
+  let inner = '';
+  if(ph==='count'){
+    const c = 3 - Math.floor(t/(SHOW_COUNT/3));
+    inner = `<span class="cap">ROUND ${G.round+1} ・ ${G.mode==='rising'?'落札決定':'入札オープン'}</span><p class="countdown num">${Math.max(1,c)}</p><p class="what">${G.mode==='rising'?'せり上げ終了！':'全員の入札をいっせいに公開します…'}</p>`;
+  } else if(ph==='reveal'){
+    inner = `<span class="cap">ROUND ${G.round+1} ・ 落札者</span><p class="gavel">🔨 落札！</p>
+      <div class="winners">${lots.map((lot,li)=>{ const ws = arr(arr(L.win)[li]); return `<div class="wlot"><b>${lotLetter(lots,li)}</b>${G.mode==='rising'?`<span class="dim">${arr(L.line)[li]}点で</span>`:`<span class="dim">落札ライン ${arr(L.line)[li]}点</span>`}
+        <div class="wnames">${ws.length?ws.slice(0,12).map(w=>`<span class="${w===i?'me':''}">${esc(seatName(G,w))}${G.mode==='rising'?'':` <i class="num">${arr(L.price)[w]}</i>`}</span>`).join('')+(ws.length>12?`<span>ほか${ws.length-12}人</span>`:''):'<span class="dim">落札者なし</span>'}</div></div>`; }).join('')}</div>
+      ${i>=0?`<p class="mine">${myWonLot()>=0?`✅ あなたは${lots.length>1?lotLetter(lots,myWonLot())+'を':''}落札！`:arr(L.price)[i]>0?'落札ならず…':'見送り'}</p>`:''}`;
+  } else {
+    inner = `<span class="cap">ROUND ${G.round+1} ・ 抽選</span>
+      <div class="draws ${lots.length>1?'two':''}" id="draws">${drawsHtml(t)}</div>`;
+  }
+  app.innerHTML = `<button class="stage" id="stage" aria-live="polite"><div class="inner">${inner}${solo?'<span class="hint">タップで結果へ</span>':''}</div></button>`;
+  document.getElementById('stage').onclick = ()=>{ if(solo){ showSkip=String(G.showAt); stopRoll(); render(); } };
+  if(ph==='draw') startRoll(); else stopRoll();
+}
+function myWonLot(){ const i=myIdx(); if(i<0||!G.last) return -1; return arr(G.last.win).map(arr).findIndex(ws=>ws.includes(i)); }
+function drawsHtml(t){
+  const lots = roundLots(G, G.round), L = G.last, res = arr(L.res);
+  return lots.map((lot,li)=>{
+    const r = res[li], faces = arr(r.faces);
+    const settled = faces.map((f,fi)=> t >= SHOW_DRAW + 700 + (fi+1)*380);
+    const done = settled.every(Boolean) && t >= SHOW_DRAW + 700 + faces.length*380 + 300;
+    return `<div class="draw"><p class="what">${lots.length>1?`<b>${lotLetter(lots,li)}</b> `:''}${lot.how.replace(/<br>/g,' ')}</p>
+      <div class="items ${done?'':'rolling'}">${faces.map((f,fi)=>faceHtml(settled[fi]?f:randomFace(f), settled[fi]?'settle':'')).join('')}</div>
+      ${done?`<p class="dim">${esc(r.text)}</p><p class="payout ${r.pay>0?'hit':r.pay<0?'neg':'miss'} settle">${r.pay>0?`${r.pay}点`:r.pay<0?`${r.pay}点`:'はずれ'}</p>`:'<p class="dim">抽選中…</p>'}</div>`;
+  }).join('');
+}
+function startRoll(){
+  if(rollTimer) return;
+  let lastSettled = -1;
+  rollTimer = setInterval(()=>{
+    const el = document.getElementById('draws'); if(!el || !G || G.phase!=='show'){ stopRoll(); return; }
+    const t = now() - G.showAt;
+    el.innerHTML = drawsHtml(t);
+    const s = Math.floor((t - SHOW_DRAW - 700)/380);
+    if(s>lastSettled && s>=0){ lastSettled = s; SFX.settle(); } else if(t < SHOW_DRAW+700+380) SFX.tick();
+  }, 110);
+}
+function stopRoll(){ if(rollTimer){ clearInterval(rollTimer); rollTimer=null; } }
+/* 段取りが変わったときの音と演出 */
+let lastSfx = '';
+function showSfx(){
+  if(!G || G.phase!=='show') return;
+  const ph = showPhaseOf(), key = ph + G.showAt;
+  if(ph==='count'){ const c = 3 - Math.floor((now()-G.showAt)/(SHOW_COUNT/3)); const k2 = key+c; if(k2!==lastSfx){ lastSfx=k2; SFX.count(); } return; }
+  if(key===lastSfx) return; lastSfx = key;
+  if(ph==='reveal'){ SFX.hammer(); if(myWonLot()>=0) SFX.coin(); }
+  if(ph==='draw') SFX.roll();
+  if(ph==='result'){
+    const lots = roundLots(G, G.round), res = arr(G.last.res);
+    const jp = lots.some((l,li)=>l.tag==='jackpot' && res[li].pay>0);
+    const w = myWonLot();
+    if(jp){ SFX.jackpot(); confetti(140); band('🎰 JACKPOT！！', `${lots.find(l=>l.tag==='jackpot').prize.replace(/（.*）/,'')}`, '#ff4fd8'); }
+    else if(w>=0){ const d = arr(G.last.delta)[myIdx()]; if(d>0){ SFX.win(); confetti(70); } else SFX.lose(); }
+    else if(projector() && res.some(r=>r.pay>0)) SFX.win();
+  }
+}
+
+/* ---------- ラウンドの結果 ---------- */
+function bidChart(li){
+  const L = G.last, price = arr(L.price), lsel = arr(L.lsel), ev = arr(L.ev)[li], line = arr(L.line)[li], i = myIdx();
+  const bids = price.map((b,j)=>lsel[j]===li?b:0).filter(b=>b>0);
+  const me = i>=0 && lsel[i]===li ? price[i] : 0;
+  const W=360, Lx=28, R=346, maxB=Math.max(Math.abs(ev)*2, ...bids, 10), X=v=>Lx+(R-Lx)*Math.max(0,Math.min(v,maxB))/maxB;
+  const NB=20, bw=(R-Lx)/NB, bins=new Array(NB).fill(0);
+  bids.forEach(b=>{ bins[Math.min(NB-1,Math.floor(b/maxB*NB))]++; });
+  const maxC=Math.max(1,...bins), base=118, top=18, sc=(base-top-12)/maxC;
+  const bars=bins.map((c,j)=>c?`<rect x="${Lx+j*bw+1}" y="${base-c*sc}" width="${bw-2}" height="${c*sc}" fill="${(j+.5)*bw/(R-Lx)*maxB>=line&&line>0?'var(--brass)':'#6b4a4e'}"/>`:'').join('');
+  const ticks=[0,.25,.5,.75,1].map(t=>{ const v=Math.round(maxB*t); return `<line x1="${X(v)}" x2="${X(v)}" y1="${base}" y2="${base+4}" stroke="var(--dim)"/><text x="${X(v)}" y="${base+16}" text-anchor="middle" font-size="10" fill="var(--dim)" font-family="IBM Plex Mono,monospace">${v}</text>`; }).join('');
+  const evx=X(ev), mx=X(me);
+  return `<svg class="chart" viewBox="0 0 ${W} 150" role="img" aria-label="入札額の分布と期待値">
+    <line x1="${Lx}" x2="${R}" y1="${base}" y2="${base}" stroke="var(--text)"/>${bars}${ticks}
+    <rect x="${evx-1.5}" y="${top-4}" width="3" height="${base-top+4}" fill="var(--win)"/>
+    <text x="${Math.min(Math.max(evx,44),320)}" y="${top-7}" text-anchor="middle" font-size="10" font-weight="700" fill="var(--win)">期待値 ${r1(ev)}</text>
+    ${me>0?`<path d="M${mx-5} ${base+30} L${mx+5} ${base+30} L${mx} ${base+23} Z" fill="var(--you)"/>`:''}
+    <text x="${Lx-4}" y="${base-maxC*sc+3}" text-anchor="end" font-size="9" fill="var(--dim)" font-family="IBM Plex Mono,monospace">${maxC}</text>
+  </svg>`;
+}
+function standings(limit, noDelta){
+  const purse = arr(G.purse), i = myIdx(), n = G.n;
+  const order = purse.map((p,j)=>j).sort((a,b)=>purse[b]-purse[a] || a-b);
+  const d = noDelta ? [] : arr(G.last && G.last.delta);
+  const row = j => `<tr class="${j===i?'me':''}"><td class="num">${rankOf(j)}</td><td>${G.teams && j<H()?`<i class="tdot" style="background:${TEAM_INFO[seatsOf(G)[j][2]].color}"></i>`:''}${esc(seatName(G,j))}${j>=H()?`<span class="tag">${typeOfSeat(j)}</span>`:''}</td><td class="num">${purse[j]}</td>${d.length?`<td class="num ${d[j]>0?'plus':d[j]<0?'minus':''}">${d[j]?sg(d[j]):'−'}</td>`:''}</tr>`;
+  const top = order.slice(0, limit);
+  let rows = top.map(row).join('');
+  if(i>=0 && !top.includes(i)) rows += `<tr class="gap"><td colspan="4">⋮</td></tr>` + row(i);
+  return `<div class="tbl"><table><thead><tr><th>順</th><th>名前</th><th>持ち点</th>${d.length?'<th>今回</th>':''}</tr></thead><tbody>${rows}</tbody></table></div>`;
+}
+function teamBars(){
+  const ts = teamScores(G, arr(G.purse)); if(!ts.length) return '';
+  const mx = Math.max(...ts.map(t=>t.avg), 1);
+  return `<section class="panel"><span class="eyebrow">🚩 班対抗（メンバーの平均点）</span>
+    ${ts.slice().sort((a,b)=>b.avg-a.avg).map((t,j)=>`<div class="tbar"><span style="color:${TEAM_INFO[t.t].color}">${j===0?'👑':''}${TEAM_INFO[t.t].name}</span><div><i style="width:${Math.max(4,t.avg/mx*100)}%;background:${TEAM_INFO[t.t].color}"></i></div><b class="num">${Math.round(t.avg)}</b></div>`).join('')}</section>`;
+}
+function feedHtml(){ const cm = arr(G.last && G.last.cm); return cm.length ? `<section class="panel feed"><span class="eyebrow">🎙 実況</span>${cm.map((c,j)=>`<p style="animation-delay:${j*.25}s">${esc(c)}</p>`).join('')}</section>` : ''; }
+function renderResult(){
+  const lots = roundLots(G, G.round), L = G.last, i = myIdx(), last = G.round+1>=ROUNDS, res = arr(L.res);
+  let head = 'ラウンド結果';
+  if(i>=0){
+    const w = myWonLot(), d = arr(L.delta)[i], hc = HINT_COST[arr(L.hints)[i]||0];
+    head = w>=0 ? `落札！ ${sg(d)}点` : arr(L.price)[i]>0 && arr(L.lsel)[i]>=0 ? `落札ならず${hc?`（ヒント −${hc}点）`:''}` : `見送り${hc?`（ヒント −${hc}点）`:''}`;
+  }
+  const lotPanels = lots.map((lot,li)=>`<section class="panel pop">
+      <span class="eyebrow">${lotLetter(lots,li)}の結果 ${lotTags(lot)}</span>
+      <p class="dim" style="font-size:.88rem">${lot.how.replace(/<br>/g,' ')}</p>
+      <p>抽選：${esc(res[li].text)} → <b class="${res[li].pay>0?'plus':res[li].pay<0?'minus':''}">${res[li].pay>0?`${res[li].pay}点`:res[li].pay<0?`${res[li].pay}点`:'はずれ（0点）'}</b> ・ 落札 ${arr(arr(L.win)[li]).length}人${G.mode==='rising'?`（${arr(L.line)[li]}点）`:`（ライン ${arr(L.line)[li]}点）`}</p>
+      ${bidChart(li)}
+      <div class="legend"><span><i style="background:var(--brass)"></i>落札</span><span><i style="background:#6b4a4e"></i>${G.mode==='rising'?'降りた値段':'入札'}</span><span><i style="background:var(--win)"></i>期待値</span>${i>=0&&arr(L.lsel)[i]===li?'<span><i style="background:var(--you)"></i>あなた</span>':''}</div>
+      <div class="calc">${lot.calc.map((c,j)=>`<div class="${j===lot.calc.length-1?'hl':''}">${esc(c)}</div>`).join('')}</div>
+    </section>`).join('');
+  app.innerHTML = cols(`${topbar()}<section class="panel center pop"><span class="eyebrow">ROUND ${G.round+1} の結果</span><h2>${head}</h2></section>${lotPanels}`,
+    `${feedHtml()}${teamBars()}<section class="panel"><span class="eyebrow">順位</span>${standings(projector()?12:8)}</section>${hostNext(last?'最終結果へ':'次のくじへ')}`);
+  const nb=document.getElementById('nextBtn'); if(nb) nb.onclick=()=>{ nb.disabled=true; nextRound(); };
+}
+
+/* ---------- 最終結果 ---------- */
+function renderFinal(){
+  const i = myIdx(), purse = arr(G.purse);
+  const myCard = i>=0 ? (()=>{ const s = styleOf(G, i); return `<section class="panel stylecard pop">
+      <span class="eyebrow">あなたのプレイスタイル</span>
+      <p class="sname">${s.icon} ${esc(s.name)}</p>${s.sub?`<p class="dim">${esc(s.sub)}</p>`:''}
+      <p>${esc(s.desc)}</p>
+      <p class="dim" style="font-size:.85rem">入札額は平均で期待値の <b class="num">${s.bids?Math.round(s.avg*100):'−'}%</b> ・ 入札${s.bids}回／見送り${s.pass}回 ・ 期待値で見た損得 <b class="num ${s.evGain>=0?'plus':'minus'}">${sg(s.evGain)}</b>点（運を除いた、入札のうまさ）</p>
+      <p class="tip">💡 ${esc(s.tip)}</p></section>`; })() : '';
+  const hist = i>=0 ? arr(G.hist).map((h,r)=>{ const l = arr(h.lsel)[i], p = arr(h.price)[i], won = l>=0 && arr(arr(h.win)[l]).includes(i), d = arr(h.delta)[i]; const ev = arr(h.ev);
+      return `<tr><td class="num">${r+1}</td><td class="num">${ev.map(r1).join(' / ')}</td><td class="num">${p>0&&l>=0?`${ev.length>1?'AB'[l]+' ':''}${p}`:'見送り'}</td><td>${won?'<span class="won">落札</span>':'−'}</td><td class="num ${d>0?'plus':d<0?'minus':''}">${d?sg(d):'−'}</td></tr>`; }).join('') : '';
+  // クラスのプレイスタイル（人間だけ）
+  const dist = {}; seatsOf(G).forEach((s,j)=>{ const t = styleOf(G,j); dist[t.id] = dist[t.id] || {n:0, icon:t.icon, name:t.name}; dist[t.id].n++; });
+  const distHtml = H()>1 ? `<section class="panel"><span class="eyebrow">クラスのプレイスタイル</span>${Object.values(dist).sort((a,b)=>b.n-a.n).map(d=>`<div class="tbar"><span>${d.icon} ${esc(d.name)}</span><div><i style="width:${d.n/H()*100}%;background:var(--brass)"></i></div><b class="num">${d.n}人</b></div>`).join('')}</section>` : '';
+  const humans = seatsOf(G).map((s,j)=>j).sort((a,b)=>purse[b]-purse[a]);
+  const humanTbl = !solo && H()>1 ? `<section class="panel"><span class="eyebrow">プレイヤーだけの順位</span><div class="tbl"><table><thead><tr><th>順</th><th>名前</th><th>持ち点</th><th>スタイル</th></tr></thead><tbody>${humans.map((j,r)=>`<tr class="${j===i?'me':''}"><td class="num">${r+1}</td><td>${esc(seatName(G,j))}</td><td class="num">${purse[j]}</td><td>${styleOf(G,j).icon}</td></tr>`).join('')}</tbody></table></div></section>` : '';
+  const ts = teamScores(G, purse).sort((a,b)=>b.avg-a.avg);
+  app.innerHTML = cols(`<header class="title"><span class="eyebrow">FINAL RESULT</span><p class="big-result">${i<0?(ts.length?`🏆 ${TEAM_INFO[ts[0].t].name} の勝ち！`:'オークション終了'):rankOf(i)===1?'優勝！':`${rankOf(i)}位`}</p><div class="rule"></div>
+      ${i>=0?`<span class="num">持ち点 ${purse[i]}（${sg(purse[i]-START)}）・ ${G.n}人中</span>`:''}</header>
+    ${myCard}${i<0?humanTbl:''}
+    ${i>=0?`<section class="panel"><span class="eyebrow">あなたの入札</span><div class="tbl"><table><thead><tr><th>回</th><th>期待値</th><th>入札</th><th></th><th>損得</th></tr></thead><tbody>${hist}</tbody></table></div></section>`:''}`,
+    `${teamBars()}${distHtml}<section class="panel"><span class="eyebrow">最終順位（CPU込み）</span>${standings(projector()?15:10, true)}</section>${i>=0?humanTbl:''}
+    ${solo||isHost?`<button class="btn" id="againBtn">${solo?'もう一度':'ロビーにもどる'}</button><button class="ghost" id="homeBtn">${solo?'設定を変える':'部屋を閉じる'}</button>`:`<p class="status">ホストが次のゲームを準備するとロビーにもどります</p><button class="ghost" id="homeBtn">部屋を出る</button>`}`);
+  if(!G._celebrated){ G._celebrated = true; if(i>=0 && rankOf(i)<=3){ confetti(120); SFX.win(); } else if(i<0) SFX.win(); }
+  const ag=document.getElementById('againBtn'); if(ag) ag.onclick=()=>{ if(solo) startGame(); else backToLobby(); };
+  document.getElementById('homeBtn').onclick=()=>{ if(solo){ G=null; screen='solo'; render(); } else leaveRoom(); };
+}
+
+/* ---------- ゲージ・その場の更新 ---------- */
+function updGauge(){
+  const g=document.getElementById('gauge'); if(!g || !G || G.phase!=='bid') return;
+  const total=+g.dataset.total, left=Math.max(0, G.endsAt-now());
+  const bar=document.getElementById('gaugeBar'), txt=document.getElementById('gaugeTxt');
+  bar.style.width=(left/total*100)+'%'; txt.textContent= left>0 ? `残り ${Math.ceil(left/1000)}秒` : '集計中…'; g.classList.toggle('danger', left<10000);
+  if(left<=0){ const bb=document.getElementById('bidBtn'); if(bb && !bb.disabled && !my.sent && myIdx()>=0){ bb.disabled=true; sendBid(); } }
+}
+function patchLive(){
+  if(!G) return;
+  if(G.phase==='bid'){ const el=document.getElementById('pickedTxt'); if(el) el.textContent = `${solo?'':`${G.picked||0} / ${H()}人が入札`}${G.n>H()?`${solo?'':' ・ '}ほか${G.n-H()}席はCPU`:''}`; const bc=document.getElementById('bigCount'); if(bc) bc.innerHTML = `${G.picked||0}<small> / ${H()}</small>`; }
+  if(G.phase==='rise') renderRise();
+}
+let lastRisePrice = -1;
+function uiTick(){
+  updGauge();
+  if(!G || screen!=='game') return;
+  if(G.phase==='show'){ showSfx(); const ph = showPhaseOf(); if(ph+G.showAt!==showStage || ph==='count') renderShow(); }
+  if(G.phase==='rise'){
+    const t = now(), p = t<G.riseAt ? -1 : priceAt(G, t);
+    const el = document.getElementById('priceNow');
+    if(p!==lastRisePrice){ lastRisePrice = p; if(p>=0) SFX.up(); renderRise(); }
+    else if(el && t<G.riseAt) el.firstChild.textContent = Math.max(0, Math.ceil((G.riseAt-t)/1000));
+    // 持ち点をこえたら自動で降りる
+    const i = myIdx();
+    if(i>=0 && my.rise && my.rise.out==null && p>=0 && p > purseOf(i) - HINT_COST[my.hint]) riseAct('out');
+  }
+}
+setInterval(()=>{ uiTick(); hostTick(); }, 100);
+initFirebase();
+render();
+})();
+</script>
+</body>
+</html>
